@@ -285,6 +285,8 @@ dependencies = [
  "display-info",
  "num-derive",
  "num-traits",
+ "quote",
+ "syn",
 ]
 
 [[package]]

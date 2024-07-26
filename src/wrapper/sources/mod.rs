@@ -1,10 +1,13 @@
 use super::{obstypes::ObsSource, ObsData, ObsError, ObsOutput, ObsString, SourceInfo};
 
 #[cfg(target_family = "windows")]
-mod window_capture;
+mod windows;
 
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::parse_macro_input;
 #[cfg(target_family = "windows")]
-pub use window_capture::WindowCaptureSourceBuilder;
+pub use windows::*;
 
 #[allow(private_bounds)]
 pub(super) trait ObsSourceBuilderPrivate {
@@ -53,15 +56,23 @@ pub trait ObsSourceBuilder: ObsSourceBuilderPrivate + ObsSourceBuilderId {
 }
 
 
-/// Implements boilerplate code for the `ObsSourceBuilder` trait.
-/// Note: The struct must contain the following fields:
-/// - settings: `Option<ObsData>`
-/// - hotkeys: `Option<ObsData>`
-/// - name: `ObsString`
-/// Also make sure to implement `ObsSourceBuilderId` for the struct.
-macro_rules! impl_obs_source_builder {
-    ($builder:ident) => {
-        impl ObsSourceBuilder for $builder {
+/// Use this attribute on a struct to create a obs source builder.
+#[proc_macro_attribute]
+pub(super) fn obs_source_builder(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemStruct);
+    let name = input.ident;
+    let generics = input.generics;
+
+
+    let expanded = quote! {
+        struct #name #generics {
+            #fields,
+            settings: Option<ObsData>,
+            hotkeys: Option<ObsData>,
+            name: ObsString
+        }
+
+        impl ObsSourceBuilder for #name {
             fn new(name: impl Into<ObsString>) -> Self {
                 Self {
                     settings: None,
@@ -91,7 +102,7 @@ macro_rules! impl_obs_source_builder {
             }
         }
 
-        impl ObsSourceBuilderPrivate for $builder {
+        impl ObsSourceBuilderPrivate for #name {
             fn take_settings(&mut self) -> Option<ObsData> {
                 self.settings.take()
             }
@@ -101,6 +112,6 @@ macro_rules! impl_obs_source_builder {
             }
         }
     };
-}
 
-pub(super) use impl_obs_source_builder;
+    TokenStream::from(expanded)
+}
