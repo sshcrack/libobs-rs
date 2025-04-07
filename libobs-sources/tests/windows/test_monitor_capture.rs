@@ -27,7 +27,7 @@ pub async fn monitor_test() {
     let (mut context, output) = initialize_obs_with_log(rec_file, true);
     let mut scene = context.scene("main");
 
-    let monitor = MonitorCaptureSourceBuilder::get_monitors().unwrap()[1].clone();
+    let monitor = MonitorCaptureSourceBuilder::get_monitors().unwrap()[0].clone();
     println!("Using monitor {:?}", monitor);
     let mut capture_source = MonitorCaptureSourceBuilder::new("monitor_test")
         .set_monitor(&monitor)
