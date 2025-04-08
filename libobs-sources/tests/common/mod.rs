@@ -57,6 +57,7 @@ pub async fn test_video(vid_path: &Path, divider: f64) -> anyhow::Result<()> {
     let stdout = format!("{}\n{}", String::from_utf8_lossy(&cmd.stdout), String::from_utf8_lossy(&cmd.stderr));
     let stdout = stdout.replace("\r", "");
 
+    println!("{}", stdout);
     let duration = stdout
         .split("\n")
         .find(|l| l.contains("Duration"))
