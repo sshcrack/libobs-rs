@@ -31,6 +31,8 @@
 #[cfg(not(windows))]
 compiler_error!("libobs-sources can only be used in windows");
 
+pub use libobs_wrapper as wrapper;
+
 pub mod windows;
 
 pub mod encoders;
