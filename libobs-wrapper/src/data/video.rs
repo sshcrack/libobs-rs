@@ -1,8 +1,10 @@
-use std::{boxed::Box, pin::Pin};
+use std::{boxed::Box, fmt::Debug, pin::Pin};
 
 use display_info::DisplayInfo;
 use libobs::obs_video_info;
 
+#[cfg(target_os = "linux")]
+use crate::utils::linux::get_linux_opengl_lib_name;
 use crate::{
     enums::{
         ObsColorspace, ObsGraphicsModule, ObsScaleType, ObsVideoFormat, ObsVideoRange, OsEnumType,
@@ -37,7 +39,6 @@ impl Default for ObsSdrVideoInfo {
 /// video context after resetting the old OBS
 /// video context. The obs_video_info is pinned in memory
 /// to ensure its address never changes, as required by libobs.
-#[derive(Debug)]
 pub struct ObsVideoInfo {
     ovi: Sendable<Pin<Box<obs_video_info>>>,
     // False positive. This is necessary to ensure
@@ -47,6 +48,20 @@ pub struct ObsVideoInfo {
     graphics_module: ObsString,
 
     sdr_info: ObsSdrVideoInfo,
+}
+
+impl Debug for ObsVideoInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ObsVideoInfo")
+            .field("fps_num", &self.get_fps_num())
+            .field("fps_den", &self.get_fps_den())
+            .field("base_width", &self.get_base_width())
+            .field("base_height", &self.get_base_height())
+            .field("output_width", &self.get_output_width())
+            .field("output_height", &self.get_output_height())
+            .field("sdr_info", &self.get_sdr_info())
+            .finish()
+    }
 }
 
 impl ObsVideoInfo {
@@ -163,7 +178,7 @@ impl ObsVideoInfoBuilder {
     /// if the OS supports DX11 (Windows)
     /// or not (OpenGL on MacOS and Unix).
     pub fn new() -> Self {
-        let display_infos = DisplayInfo::all().unwrap();
+        let display_infos = DisplayInfo::all().unwrap_or_default();
         let (mut width, mut height) = (1920, 1080);
         for display_info in display_infos {
             if display_info.is_primary {
@@ -198,7 +213,10 @@ impl ObsVideoInfoBuilder {
     /// to create an `ObsVideoInfo`.
     pub fn build(self) -> ObsVideoInfo {
         let graphics_mod_str = match self.graphics_module {
+            #[cfg(not(target_os = "linux"))]
             ObsGraphicsModule::OpenGL => ObsString::new("libobs-opengl"),
+            #[cfg(target_os = "linux")]
+            ObsGraphicsModule::OpenGL => ObsString::new(get_linux_opengl_lib_name()),
             ObsGraphicsModule::DirectX11 => ObsString::new("libobs-d3d11.dll"),
         };
 

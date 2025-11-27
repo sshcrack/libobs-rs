@@ -5,11 +5,9 @@ mod args;
 use colored::Colorize;
 #[cfg(feature = "cli")]
 use std::env::{self, args};
-#[cfg(feature = "cli")]
-use std::path::PathBuf;
 
-#[cfg(feature = "cli")]
-use cargo_obs_build::{build_obs_binaries, ObsBuildConfig};
+#[cfg(all(target_os = "linux", feature = "cli"))]
+mod ubuntu_install;
 
 #[cfg(feature = "cli")]
 fn setup_logger() -> Result<(), fern::InitError> {
@@ -51,20 +49,31 @@ fn main() -> anyhow::Result<()> {
     }
 
     let args = args::RunArgs::parse_from(args);
-    let config = ObsBuildConfig {
-        cache_dir: args.cache_dir,
-        tag: args.tag,
-        out_dir: PathBuf::from(args.out_dir),
-        repo_id: Some(args.repo_id),
-        override_zip: args.override_zip,
-        rebuild: args.rebuild,
-        browser: args.browser,
-        skip_compatibility_check: args.skip_compatibility_check,
-        remove_pdbs: args.remove_pdbs,
+    match args.command {
+        #[cfg(target_os = "linux")]
+        args::Commands::Install(args) => {
+            ubuntu_install::linux_obs_system_install(args)?;
+        }
+        #[cfg(not(target_os = "linux"))]
+        args::Commands::Build(args) => {
+            use cargo_obs_build::{build_obs_binaries, ObsBuildConfig};
+            use std::path::PathBuf;
+
+            let config = ObsBuildConfig {
+                cache_dir: args.cache_dir,
+                tag: args.tag,
+                out_dir: PathBuf::from(args.out_dir),
+                repo_id: Some(args.repo_id),
+                override_zip: args.override_zip,
+                rebuild: args.rebuild,
+                browser: args.browser,
+                skip_compatibility_check: args.skip_compatibility_check,
+                remove_pdbs: args.remove_pdbs,
+            };
+
+            build_obs_binaries(config)?;
+        }
     };
-
-    build_obs_binaries(config)?;
-
     Ok(())
 }
 
@@ -73,6 +82,3 @@ fn main() {
     eprintln!("This binary requires the 'cli' feature to be enabled.");
     std::process::exit(1);
 }
-
-#[cfg(not(target_family = "windows"))]
-compile_error!("cargo-obs-build is only supported on Windows targets.");

@@ -5,6 +5,8 @@
 
 A utility crate for automatically downloading and installing OBS (Open Broadcaster Software) Studio binaries at runtime. This crate is part of the libobs-rs ecosystem and is designed to make distributing OBS-based applications easier by handling the setup of OBS binaries.
 
+Note: This crate currently supports Windows and MacOS platforms. Refer to the libobs-wrapper documentation for Linux setup instructions [here](../libobs-wrapper/README.md).
+
 ## Features
 
 - **Automatic OBS Download**: Downloads appropriate OBS binaries at runtime
@@ -39,7 +41,7 @@ use libobs_bootstrapper::{
 async fn main() -> anyhow::Result<()> {
     // Configure bootstrapper options
     let options = ObsBootstrapperOptions::default();
-    
+
     // Run bootstrap with default console handler
     match ObsBootstrapper::bootstrap(&options).await? {
         ObsBootstrapperResult::None => {

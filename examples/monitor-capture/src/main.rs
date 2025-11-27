@@ -1,28 +1,66 @@
-use std::thread;
-use std::time::Duration;
-
-use libobs_sources::windows::{MonitorCaptureSourceBuilder, MonitorCaptureSourceUpdater};
 use libobs_wrapper::context::ObsContext;
-use libobs_wrapper::data::ObsObjectUpdater;
 use libobs_wrapper::encoders::ObsContextEncoders;
-use libobs_wrapper::sources::ObsSourceBuilder;
-use libobs_wrapper::utils::traits::ObsUpdatable;
+use libobs_wrapper::logger::ObsLogger;
 use libobs_wrapper::utils::{AudioEncoderInfo, ObsPath, OutputInfo, StartupInfo};
 
-pub fn main() -> anyhow::Result<()> {
+#[cfg(windows)]
+use libobs_sources::windows::{MonitorCaptureSourceBuilder, MonitorCaptureSourceUpdater};
+#[cfg(windows)]
+use libobs_wrapper::data::ObsObjectUpdater;
+#[cfg(windows)]
+use libobs_wrapper::sources::ObsSourceBuilder;
+#[cfg(windows)]
+use libobs_wrapper::utils::traits::ObsUpdatable;
+
+#[cfg(target_os = "linux")]
+use libobs_sources::linux::LinuxGeneralScreenCapture;
+#[cfg(target_os = "linux")]
+use std::io::{self, Write};
+
+#[derive(Debug)]
+pub struct NoLogger {}
+impl ObsLogger for NoLogger {
+    fn log(&mut self, _level: libobs_wrapper::enums::ObsLogLevel, _msg: String) {}
+}
+
+fn main() -> anyhow::Result<()> {
     // Start the OBS context
-    let startup_info = StartupInfo::default();
+    let startup_info = StartupInfo::default()
+        // FIXME This is not recommended in production. This is just for the purpose of this example.
+        .set_logger(Box::new(NoLogger {}));
     let mut context = ObsContext::new(startup_info)?;
 
     let mut scene = context.scene("main")?;
+
+    // Platform-specific screen/monitor capture setup
+    #[cfg(windows)]
     let monitors = MonitorCaptureSourceBuilder::get_monitors()?;
 
+    #[cfg(windows)]
     let mut monitor_capture = context
         .source_builder::<MonitorCaptureSourceBuilder, _>("Monitor Capture")?
         .set_monitor(&monitors[0])
         .add_to_scene(&mut scene)?;
 
-    // Register the source
+    #[cfg(target_os = "linux")]
+    {
+        // You could also read a restore token here from a file
+        let screen_capture = LinuxGeneralScreenCapture::auto_detect(
+            context.runtime().clone(),
+            "Screen Capture",
+            None,
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to create screen capture: {}", e))?;
+
+        println!(
+            "Using {} capture method",
+            screen_capture.capture_type_name()
+        );
+
+        screen_capture.add_to_scene(&mut scene)?;
+    }
+
+    // Common output and encoder setup
     scene.set_to_channel(0)?;
 
     // Set up output to ./recording.mp4
@@ -60,20 +98,42 @@ pub fn main() -> anyhow::Result<()> {
 
     output.start()?;
 
-    println!("recording for 5 seconds and switching monitor...");
-    thread::sleep(Duration::from_secs(5));
+    #[cfg(windows)]
+    {
+        use std::thread;
+        use std::time::Duration;
 
-    // Switching monitor
-    monitor_capture
-        .create_updater::<MonitorCaptureSourceUpdater>()?
-        .set_monitor(&monitors[1])
-        .update()?;
+        println!("Recording for 5 seconds and switching monitor...");
+        thread::sleep(Duration::from_secs(5));
 
-    println!("recording for another 5 seconds...");
-    thread::sleep(Duration::from_secs(5));
+        // Switching monitor
+        monitor_capture
+            .create_updater::<MonitorCaptureSourceUpdater>()?
+            .set_monitor(&monitors[1])
+            .update()?;
 
-    // Success!
+        println!("Recording for another 5 seconds...");
+        thread::sleep(Duration::from_secs(5));
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        print!("Recording... press Enter to stop.");
+        io::stdout().flush()?;
+
+        let mut buf = String::new();
+        io::stdin().read_line(&mut buf)?;
+    }
+
+    #[cfg(not(any(windows, target_os = "linux")))]
+    {
+        eprintln!("This example is only supported on Windows and Linux.");
+        return Ok(());
+    }
+
+    // Stop recording
     output.stop()?;
+    println!("Recording saved to recording.mp4");
 
     Ok(())
 }

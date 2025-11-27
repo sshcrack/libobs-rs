@@ -38,10 +38,11 @@ use std::ffi::CStr;
 use std::sync::Arc;
 use std::{ptr, thread};
 
+use crate::context::ObsContext;
 use crate::crash_handler::main_crash_handler;
 use crate::enums::{ObsLogLevel, ObsResetVideoStatus};
 use crate::logger::{extern_log_callback, internal_log_global, LOGGER};
-use crate::utils::initialization::load_debug_privilege;
+use crate::utils::initialization::{platform_specific_setup, PlatformSpecificGuard};
 use crate::utils::{ObsError, ObsModules, ObsString};
 use crate::{context::OBS_THREAD_ID, utils::StartupInfo};
 
@@ -92,6 +93,9 @@ pub struct ObsRuntime {
     #[cfg(feature = "enable_runtime")]
     queued_commands: Arc<AtomicUsize>,
     _guard: Arc<_ObsRuntimeGuard>,
+
+    #[cfg(not(feature = "enable_runtime"))]
+    _platform_specific: Option<Arc<PlatformSpecificGuard>>,
 }
 
 impl ObsRuntime {
@@ -155,10 +159,11 @@ impl ObsRuntime {
     /// Creates the OBS thread and performs core initialization.
     #[cfg(not(feature = "enable_runtime"))]
     fn init(info: StartupInfo) -> anyhow::Result<(ObsRuntime, ObsModules, StartupInfo)> {
-        let (startup, mut modules) = Self::initialize_inner(info)?;
+        let (startup, mut modules, platform_specific) = Self::initialize_inner(info)?;
 
         let runtime = Self {
             _guard: Arc::new(_ObsRuntimeGuard {}),
+            _platform_specific: platform_specific,
         };
 
         modules.runtime = Some(runtime.clone());
@@ -181,7 +186,7 @@ impl ObsRuntime {
             let res = Self::initialize_inner(info);
 
             match res {
-                Ok((info, modules)) => {
+                Ok((info, modules, _platform_specific)) => {
                     log::trace!("OBS context initialized successfully");
                     let e = init_tx.send(Ok((Sendable(modules), info)));
                     if let Err(err) = e {
@@ -352,7 +357,9 @@ impl ObsRuntime {
     /// # Returns
     ///
     /// A `Result` containing the updated startup info and loaded modules, or an error
-    fn initialize_inner(mut info: StartupInfo) -> Result<(StartupInfo, ObsModules), ObsError> {
+    fn initialize_inner(
+        mut info: StartupInfo,
+    ) -> Result<(StartupInfo, ObsModules, Option<Arc<PlatformSpecificGuard>>), ObsError> {
         // Checks that there are no other threads
         // using libobs using a static Mutex.
         //
@@ -383,6 +390,7 @@ impl ObsRuntime {
 
         // Install DLL blocklist hook here
 
+        #[cfg(windows)]
         unsafe {
             libobs::obs_init_win32_crash_handler();
         }
@@ -390,7 +398,10 @@ impl ObsRuntime {
         // Set logger, load debug privileges and crash handler
         unsafe {
             libobs::base_set_crash_handler(Some(main_crash_handler), std::ptr::null_mut());
-            load_debug_privilege();
+        }
+
+        let native = platform_specific_setup(info.nix_display.clone())?;
+        unsafe {
             libobs::base_set_log_handler(Some(extern_log_callback), std::ptr::null_mut());
         }
 
@@ -411,6 +422,27 @@ impl ObsRuntime {
         let version_str = version_cstr.to_string_lossy().into_owned();
 
         internal_log_global(ObsLogLevel::Info, format!("OBS {}", version_str));
+
+        // Check version compatibility
+        if !ObsContext::check_version_compatibility() {
+            internal_log_global(
+                ObsLogLevel::Warning,
+                "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!".to_string(),
+            );
+            internal_log_global(
+                ObsLogLevel::Warning,
+                format!(
+                    "OBS major version mismatch: installed version is {}, but expected major version {}. Expect crashes or bugs!!",
+                    version_str,
+                    libobs::LIBOBS_API_MAJOR_VER
+                ),
+            );
+            internal_log_global(
+                ObsLogLevel::Warning,
+                "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!".to_string(),
+            );
+        }
+
         internal_log_global(
             ObsLogLevel::Info,
             "---------------------------------".to_string(),
@@ -461,7 +493,7 @@ impl ObsRuntime {
             "==== Startup complete ===============================================".to_string(),
         );
 
-        Ok((info, obs_modules))
+        Ok((info, obs_modules, native))
     }
 
     /// Shuts down the OBS context and cleans up resources

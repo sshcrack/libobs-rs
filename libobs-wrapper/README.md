@@ -18,7 +18,12 @@ A safe, ergonomic Rust wrapper around the OBS (Open Broadcaster Software) Studio
 
 ## Prerequisites
 
-The library needs OBS binaries in your target directory. There are multiple ways to set this up:
+The library needs OBS binaries in your target directory for Windows and MacOS.
+
+If you want to target Linux, you'll need to build and install OBS Studio from source. This can be done on Ubuntu using the `cargo-obs-build` tool (using `cargo obs-build install`), or by following the [official OBS build instructions](https://github.com/obsproject/obs-studio/wiki/Build-Instructions-For-Linux). Users of your application can just install OBS Studio via their package manager directly (tested and working for version 30+ on Ubuntu)
+
+
+For Windows and Macos, there are multiple ways to set this up:
 
 ### Option 1: Using cargo-obs-build (Recommended for development)
 
@@ -43,13 +48,13 @@ Install OBS in your target directory:
 
 ```bash
 # For debug builds
-cargo obs-build --out-dir target/debug
+cargo obs-build build --out-dir target/debug
 
 # For release builds
-cargo obs-build --out-dir target/release
+cargo obs-build build --out-dir target/release
 
 # For testing
-cargo obs-build --out-dir target/(debug|release)/deps
+cargo obs-build build --out-dir target/(debug|release)/deps
 ```
 
 More details can be found in the [cargo-obs-build documentation](./cargo-obs-build/README.md).

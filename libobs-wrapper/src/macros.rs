@@ -59,6 +59,7 @@ macro_rules! impl_obs_drop {
         impl Drop for $struct_name {
             fn drop(&mut self) {
                 log::trace!("Dropping {}...", stringify!($struct_name));
+
                 $(let $var = self.$var.clone();)*
                 #[cfg(any(not(feature = "no_blocking_drops"), test, feature="__test_environment"))]
                 {

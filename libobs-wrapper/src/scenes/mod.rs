@@ -20,6 +20,18 @@ struct _SceneDropGuard {
 
 impl_obs_drop!(_SceneDropGuard, (scene), move || unsafe {
     let scene_source = libobs::obs_scene_get_source(scene);
+    for i in 0..libobs::MAX_CHANNELS {
+        let inner_ptr = libobs::obs_get_output_source(i);
+
+        //TODO ensure the output has stopped
+        if inner_ptr == scene_source {
+            println!("Removing scene from output channel {}", i);
+            libobs::obs_set_output_source(i, std::ptr::null_mut());
+        }
+
+        libobs::obs_source_release(inner_ptr);
+    }
+
     libobs::obs_source_release(scene_source);
     libobs::obs_scene_release(scene);
 });

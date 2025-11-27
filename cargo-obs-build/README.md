@@ -2,6 +2,10 @@
 
 A library and CLI tool for building and installing libOBS binaries. It automatically downloads the correct version of OBS Studio binaries based on your `libobs` crate version, handling caching and version compatibility.
 
+Note: On Linux, you must build OBS Studio from source and install it manually. This can be automatically be done by `cargo-obs-build` on `Ubuntu`, just run `cargo-obs-build install`. For other platforms refer to these [Build Instructions For Linux](https://github.com/obsproject/obs-studio/wiki/Build-Instructions-For-Linux).
+
+For Windows and macOS, this tool will download prebuilt binaries.
+
 ## Usage
 
 ### As a CLI Tool
@@ -10,7 +14,7 @@ The CLI tool automatically prepares the environment by putting the required OBS 
 
 ```bash
 cargo install cargo-obs-build
-cargo obs-build --out-dir ./target/debug # or ./target/release, this should be the directory where your binary will be built
+cargo obs-build build --out-dir ./target/debug # or ./target/release, this should be the directory where your binary will be built
 ```
 
 Run `cargo obs-build --help` for all available options.
