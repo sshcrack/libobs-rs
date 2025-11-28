@@ -3,5 +3,4 @@
 pub mod output;
 pub mod sources;
 
-#[cfg(feature = "auto-bootstrap")]
-pub use libobs_bootstrapper;
+pub use libobs_wrapper as wrapper;

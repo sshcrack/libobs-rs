@@ -9,8 +9,6 @@
 #[cfg(target_family = "windows")]
 pub mod windows;
 
-pub use libobs_wrapper as wrapper;
-
 #[cfg(target_os = "linux")]
 pub mod linux;
 
