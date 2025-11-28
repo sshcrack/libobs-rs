@@ -45,7 +45,6 @@ define_object_manager!(
     /// Sets whether the cursor should be captured
     cursor: bool,
 
-    #[obs_property(type_t = "bool")]
     /// Whether to capture audio from window source (BETA) <br>
     /// When enabled, creates an "Application Audio Capture" source that automatically updates to the currently captured window/application. <br>
     /// Note that if Desktop Audio is configured, this could result in doubled audio.
@@ -89,6 +88,19 @@ impl WindowCaptureSource {
     /// The updated `WindowCaptureSourceBuilder` instance.
     pub fn set_window(self, window: &libobs_wrapper::unsafe_send::Sendable<WindowInfo>) -> Self {
         self.set_window_raw(window.0.obs_id.as_str())
+    }
+
+    pub fn set_capture_audio(mut self, capture_audio: bool) -> anyhow::Result<Self, String> {
+        use crate::sources::windows::audio_capture_available;
+
+        if capture_audio && !audio_capture_available() {
+            return Err("Game Audio Capture is not available on this system".to_string());
+        }
+
+        self.get_settings_updater()
+            .set_bool_ref("capture_audio", capture_audio);
+
+        Ok(self)
     }
 }
 

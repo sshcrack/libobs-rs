@@ -1,7 +1,7 @@
 [package]
 name = "libobs-simple"
 description = "A simple and easy-to-use Rust wrapper around libobs-wrapper for recording and streaming."
-version = "5.0.1+32.0.2"
+version = "5.0.2+32.0.2"
 repository = "https://github.com/libobs-rs/libobs-rs"
 documentation = "https://sshcrack.github.io/libobs-docs/libobs_simple/"
 readme = "README.md"
@@ -35,7 +35,6 @@ default = ["window-list", "enable_runtime"]
 generate_bindings = ["libobs/generate_bindings"]
 window-list = ["dep:libobs-window-helper"]
 enable_runtime = ["libobs-wrapper/enable_runtime"]
-# This is both used for testing and to generate the docs, I don't want to introduce even more features for this
 __test_environment = ["libobs-wrapper/__test_environment"]
 
 [dev-dependencies]

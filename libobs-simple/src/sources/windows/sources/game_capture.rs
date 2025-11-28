@@ -1,7 +1,8 @@
+use libobs_simple_macro::obs_object_impl;
 #[cfg(feature = "window-list")]
 use libobs_window_helper::{get_all_windows, WindowInfo, WindowSearchMode};
 use libobs_wrapper::{
-    data::StringEnum,
+    data::{ObsObjectBuilder, ObsObjectUpdater, StringEnum},
     sources::{ObsSourceBuilder, ObsSourceRef},
 };
 
@@ -147,6 +148,22 @@ impl GameCaptureSourceBuilder {
     /// The updated `GameCaptureSourceBuilder` instance.
     pub fn set_window(self, window: &WindowInfo) -> Self {
         self.set_window_raw(window.obs_id.as_str())
+    }
+}
+
+#[obs_object_impl]
+impl GameCaptureSource {
+    pub fn set_capture_audio(mut self, capture_audio: bool) -> anyhow::Result<Self, String> {
+        use crate::sources::windows::audio_capture_available;
+
+        if capture_audio && !audio_capture_available() {
+            return Err("Game Audio Capture is not available on this system".to_string());
+        }
+
+        self.get_settings_updater()
+            .set_bool_ref("capture_audio", capture_audio);
+
+        Ok(self)
     }
 }
 

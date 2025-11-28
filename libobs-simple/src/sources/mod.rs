@@ -8,11 +8,11 @@
 //! You can find examples [here](https://github.com/libobs-rs/libobs-rs/tree/main/examples).
 
 #[cfg(any(windows, doc))]
-#[doc(cfg(windows))]
+#[cfg_attr(doc, doc(cfg(windows)))]
 pub mod windows;
 
 #[cfg(any(target_os = "linux", doc))]
-#[doc(cfg(target_os = "linux"))]
+#[cfg_attr(doc, doc(cfg(target_os = "linux")))]
 pub mod linux;
 
 mod macro_helper;
