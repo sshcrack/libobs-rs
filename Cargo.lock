@@ -1862,7 +1862,7 @@ dependencies = [
 
 [[package]]
 name = "libobs"
-version = "4.0.1+32.0.2"
+version = "4.0.2+32.0.2"
 dependencies = [
  "bindgen",
  "pkg-config",
@@ -1893,7 +1893,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-simple"
-version = "5.0.4+32.0.2"
+version = "5.0.5+32.0.2"
 dependencies = [
  "anyhow",
  "display-info",
@@ -1934,7 +1934,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-wrapper"
-version = "6.0.2+32.0.2"
+version = "6.0.3+32.0.2"
 dependencies = [
  "anyhow",
  "arboard",
