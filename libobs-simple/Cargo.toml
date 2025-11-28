@@ -35,6 +35,7 @@ default = ["window-list", "enable_runtime"]
 generate_bindings = ["libobs/generate_bindings"]
 window-list = ["dep:libobs-window-helper"]
 enable_runtime = ["libobs-wrapper/enable_runtime"]
+# This is both used for testing and to generate the docs, I don't want to introduce even more features for this
 __test_environment = ["libobs-wrapper/__test_environment"]
 
 [dev-dependencies]
