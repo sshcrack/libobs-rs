@@ -1,6 +1,6 @@
+use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
-use std::collections::HashSet;
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
@@ -45,10 +45,12 @@ fn main() {
         pkg_config::Config::new()
             .atleast_version(version)
             .probe("libobs")
-            .unwrap_or_else(|_| panic!(
-                "Could not find libobs via pkg-config. Requires >= {}. See build guide.",
-                version
-            ));
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Could not find libobs via pkg-config. Requires >= {}. See build guide.",
+                    version
+                )
+            });
     } else {
         // Fallback: assume dynamic libobs available via system linker path
         println!("cargo:rustc-link-lib=dylib=obs");
@@ -97,8 +99,7 @@ fn get_ignored_macros() -> IgnoreMacros {
 }
 
 fn generate_bindings(target_os: &str) {
-    let include_win_bindings =
-        env::var_os("CARGO_FEATURE_INCLUDE_WIN_BINDINGS").is_some();
+    let include_win_bindings = env::var_os("CARGO_FEATURE_INCLUDE_WIN_BINDINGS").is_some();
 
     let mut builder = bindgen::builder()
         .header("headers/wrapper.h")
