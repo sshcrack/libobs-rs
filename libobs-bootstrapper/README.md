@@ -22,8 +22,7 @@ Add the crate to your dependencies:
 
 ```toml
 [dependencies]
-libobs-bootstrapper = "0.1.0"
-async-trait = "0.1"  # For implementing the bootstrap status handler
+libobs-bootstrapper = "0.2.0"
 ```
 
 ### Basic Example
@@ -31,30 +30,34 @@ async-trait = "0.1"  # For implementing the bootstrap status handler
 Here's a simple example using the default console handler:
 
 ```rust
+use std::{sync::Arc, time::Duration};
 use libobs_bootstrapper::{
-    ObsBootstrapper,
-    ObsBootstrapperOptions,
-    ObsBootstrapConsoleHandler,
+    ObsBootstrapper, ObsBootstrapperOptions, ObsBootstrapperResult
 };
+use libobs_wrapper::{context::ObsContext, utils::StartupInfo};
+
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    // Configure bootstrapper options
-    let options = ObsBootstrapperOptions::default();
+async fn main() {
+    env_logger::init();
+    println!("Starting OBS bootstrapper...");
+    let handler = ObsBootstrapProgress::new();
 
-    // Run bootstrap with default console handler
-    match ObsBootstrapper::bootstrap(&options).await? {
-        ObsBootstrapperResult::None => {
-            println!("OBS is already installed and up to date!");
-        }
-        ObsBootstrapperResult::Restart => {
-            println!("OBS has been updated. Restarting application...");
-            ObsBootstrapper::spawn_updater(options).await?;
-            std::process::exit(0);
-        }
+    let res = ObsBootstrapper::bootstrap(&ObsBootstrapperOptions::default())
+        .await
+        .unwrap();
+    if matches!(res, ObsBootstrapperResult::Restart) {
+        println!("OBS has been downloaded and extracted. The application will now restart.");
+        return;
     }
 
-    Ok(())
+    let context = ObsContext::new(StartupInfo::default()).unwrap();
+    handler.done();
+
+    println!("Done");
+    // Use the context here
+    // For example creating new obs data
+    context.data().unwrap();
 }
 ```
 
@@ -77,21 +80,20 @@ impl CustomProgressHandler {
                 .template("{msg}\n{wide_bar} {pos}/{len}")
                 .unwrap(),
         );
-        
+
         bar.set_message("Initializing bootstrapper...");
         Self(Arc::new(bar))
     }
 }
 
-#[async_trait::async_trait]
 impl ObsBootstrapStatusHandler for CustomProgressHandler {
-    async fn handle_downloading(&mut self, prog: f32, msg: String) -> anyhow::Result<()> {
+    fn handle_downloading(&mut self, prog: f32, msg: String) -> anyhow::Result<()> {
         self.0.set_message(msg);
         self.0.set_position((prog * 100.0) as u64);
         Ok(())
     }
-    
-    async fn handle_extraction(&mut self, prog: f32, msg: String) -> anyhow::Result<()> {
+
+    fn handle_extraction(&mut self, prog: f32, msg: String) -> anyhow::Result<()> {
         self.0.set_message(msg);
         self.0.set_position(100 + (prog * 100.0) as u64);
         Ok(())
