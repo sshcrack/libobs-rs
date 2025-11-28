@@ -7,13 +7,12 @@ A safe, ergonomic Rust wrapper around the OBS (Open Broadcaster Software) Studio
 ## Features
 
 - **Thread Safety**: Uses a dedicated thread to communicate with OBS, allowing safe cross-thread usage
-- **Async API**: Full async support with optional blocking API (via `blocking` feature)
 - **Resource Safety**: RAII-based resource management for OBS objects
-- **Runtime Bootstrapping**: Optional automatic download and setup of OBS binaries at runtime
+- **Runtime Bootstrapping**: Optional automatic download and setup of OBS binaries at runtime (functionality moved to [libobs-bootstrapper](https://crates.io/crates/libobs-bootstrapper))
 - **Scene Management**: Create and manipulate scenes, sources, and outputs
 - **Video Recording**: Configure and record video with various encoders
 - **Audio Support**: Configure audio sources and encoders
-- **Display Management**: Create and control OBS displays
+- **Display Management**: Create and control OBS preview windows
 
 ## Prerequisites
 
