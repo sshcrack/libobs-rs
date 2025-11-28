@@ -1,7 +1,8 @@
 use crate::define_object_manager;
-use anyhow::bail;
 
 use super::{ObsWindowCaptureMethod, ObsWindowPriority};
+use anyhow::bail;
+use libobs_simple_macro::obs_object_impl;
 #[cfg(feature = "window-list")]
 use libobs_window_helper::{get_all_windows, WindowInfo, WindowSearchMode};
 use libobs_wrapper::{
@@ -90,19 +91,6 @@ impl WindowCaptureSource {
     pub fn set_window(self, window: &libobs_wrapper::unsafe_send::Sendable<WindowInfo>) -> Self {
         self.set_window_raw(window.0.obs_id.as_str())
     }
-
-    pub fn set_capture_audio(mut self, capture_audio: bool) -> anyhow::Result<Self> {
-        use crate::sources::windows::audio_capture_available;
-
-        if capture_audio && !audio_capture_available() {
-            bail!("Game Audio Capture is not available on this system");
-        }
-
-        self.get_settings_updater()
-            .set_bool_ref("capture_audio", capture_audio);
-
-        Ok(self)
-    }
 }
 
 impl<'a> WindowCaptureSourceUpdater<'a> {
@@ -119,6 +107,22 @@ impl WindowCaptureSourceBuilder {
     pub fn set_capture_method(mut self, method: ObsWindowCaptureMethod) -> Self {
         self.capture_method = Some(method);
         self
+    }
+}
+
+#[obs_object_impl]
+impl WindowCaptureSource {
+    pub fn set_capture_audio(mut self, capture_audio: bool) -> anyhow::Result<Self> {
+        use crate::sources::windows::audio_capture_available;
+
+        if capture_audio && !audio_capture_available() {
+            bail!("Game Audio Capture is not available on this system");
+        }
+
+        self.get_settings_updater()
+            .set_bool_ref("capture_audio", capture_audio);
+
+        Ok(self)
     }
 }
 
