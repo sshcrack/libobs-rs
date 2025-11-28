@@ -3,6 +3,8 @@
 [![Docs](https://img.shields.io/badge/docs-passing-brightgreen?style=for-the-badge)](https://sshcrack.github.io/libobs-docs/libobs_wrapper/)
 ![Coverage](https://img.shields.io/badge/coverage-55%25-orange?style=for-the-badge)
 
+Documentation is available [here](https://sshcrack.github.io/libobs-docs/libobs/)
+
 > [!NOTE]
 > Need help? [Join our discord server!](https://discord.gg/rsTffTMPMF) 
 
