@@ -1,0 +1,83 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+    workflow_dispatch:
+    push:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+    pull_request:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+    # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+    copilot-setup-steps:
+        runs-on: ubuntu-latest
+
+        # Set the permissions to the lowest permissions possible needed for your steps.
+        # Copilot will be given its own token for its operations.
+        permissions:
+            # If you want to clone the repository as part of your setup steps, for example to install dependencies, you'll need the `contents: read` permission. If you don't clone the repository in your setup steps, Copilot will do this for you automatically after the steps complete.
+            contents: read
+
+        # You can define any steps you want, and they will run before the agent starts.
+        # If you do not check out your code, Copilot will do this for you.
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - uses: awalsh128/cache-apt-pkgs-action@latest
+              with:
+                  packages: cmake extra-cmake-modules ninja-build pkg-config clang clang-format build-essential curl ccache git zsh libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev libx264-dev libcurl4-openssl-dev libmbedtls-dev libgl1-mesa-dev libjansson-dev libluajit-5.1-dev python3-dev libx11-dev libxcb-randr0-dev libxcb-shm0-dev libxcb-xinerama0-dev libxcb-composite0-dev libxcomposite-dev libxinerama-dev libxcb1-dev libx11-xcb-dev libxcb-xfixes0-dev swig libcmocka-dev libxss-dev libglvnd-dev libgles2-mesa-dev libwayland-dev librist-dev libsrt-openssl-dev libpci-dev libpipewire-0.3-dev libqrcodegencpp-dev uthash-dev libsimde-dev qt6-base-dev qt6-base-private-dev qt6-svg-dev qt6-wayland qt6-image-formats-plugins libasound2-dev libfdk-aac-dev libfontconfig-dev libfreetype6-dev libjack-jackd2-dev libpulse-dev libsndio-dev libspeexdsp-dev libudev-dev libv4l-dev libva-dev libvlc-dev libvpl-dev libdrm-dev nlohmann-json3-dev libwebsocketpp-dev libasio-dev libffmpeg-nvenc-dev xvfb ffmpeg libblas-dev libblas3 liblapack3
+                  version: 1.0
+
+            - name: Symlink libraries
+              run: |
+                  sudo ln -sf /usr/lib/x86_64-linux-gnu/blas/libblas.so.3 /usr/lib/x86_64-linux-gnu/libblas.so.3
+                  sudo ln -sf /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3 /usr/lib/x86_64-linux-gnu/liblapack.so.3
+
+            - name: Build and Install OBS Studio from Source
+              run: |
+                  git clone --recursive https://github.com/obsproject/obs-studio.git obs-studio
+                  cd obs-studio
+                  git fetch --tags
+                  LATEST_TAG=$(git describe --tags --abbrev=0)
+                  echo "Building OBS Studio version: $LATEST_TAG"
+                  git checkout $LATEST_TAG
+                  git submodule update --init --recursive
+                  cmake --preset ubuntu -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_BROWSER=OFF
+                  cmake --build build_ubuntu --parallel $(nproc)
+                  sudo cmake --install build_ubuntu
+
+            - name: Set up virtual display for Linux
+              run: |
+                  export DISPLAY=:99
+                  Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+                  sleep 3
+                  echo "DISPLAY=:99" >> $GITHUB_ENV
+
+            - name: Set up OBS environment for Linux
+              run: |
+                  echo "PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+                  echo "LD_LIBRARY_PATH=/usr/lib:/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+                  echo "=== OBS Installation Verification ==="
+                  if [ -f "/usr/lib/pkgconfig/libobs.pc" ] || [ -f "/usr/lib/x86_64-linux-gnu/pkgconfig/libobs.pc" ]; then
+                    echo "✓ OBS Studio pkg-config file found"
+                    if pkg-config --exists libobs; then
+                      echo "✓ libobs pkg-config validation passed"
+                      echo "✓ libobs version: $(pkg-config --modversion libobs)"
+                      echo "✓ libobs cflags: $(pkg-config --cflags libobs)"
+                      echo "✓ libobs libs: $(pkg-config --libs libobs)"
+                    else
+                      echo "✗ libobs pkg-config validation failed"
+                      exit 1
+                    fi
+                  else
+                    echo "✗ libobs.pc not found in expected locations"
+                    find /usr -name "libobs.pc" 2>/dev/null || echo "libobs.pc not found anywhere in /usr"
+                    find /usr -name "*.pc" -path "*/pkgconfig/*" | grep -i obs || echo "No OBS-related .pc files found"
+                    exit 1
+                  fi
+                  echo "======================================"
