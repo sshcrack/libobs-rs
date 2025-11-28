@@ -1,6 +1,6 @@
 # libobs-rs
-![Build](https://img.shields.io/github/actions/workflow/status/joshprk/libobs-rs/validation.yml?branch=main&label=build&style=flat)
-![Docs](https://img.shields.io/github/actions/workflow/status/joshprk/libobs-rs/build-docs.yml?branch=main&label=docs&style=flat)
+![Build](https://img.shields.io/github/actions/workflow/status/libobs-rs/libobs-rs/validation.yml?branch=main&label=build&style=flat)
+![Docs](https://img.shields.io/github/actions/workflow/status/libobs-rs/libobs-rs/build-docs.yml?branch=main&label=docs&style=flat)
 ![Coverage](https://img.shields.io/badge/coverage-55%25-orange?style=flat)
 
 > [!NOTE]
@@ -13,7 +13,7 @@ Currently only tested on Windows and Linux (Ubuntu Wayland / X11). MacOS doesn't
 The API is currently unstable and will definitely have breaking revisions in the future.
 
 > [!NOTE]
-> The libobs-wrapper async functionality has been removed because of all kinds of issues ([#32](https://github.com/joshprk/libobs-rs/issues/32))
+> The libobs-wrapper async functionality has been removed because of all kinds of issues ([#32](https://github.com/libobs-rs/libobs-rs/issues/32))
 
 
 ## Prerequisites

@@ -23,4 +23,4 @@ pub struct WindowCaptureSourceBuilder {
 ```
 
 For more examples look at
-the [libobs-simple crate](https://github.com/joshprk/libobs-rs/tree/source-trait/libobs-simple).
+the [libobs-simple crate](https://github.com/libobs-rs/libobs-rs/tree/main/libobs-simple).

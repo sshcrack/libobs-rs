@@ -81,7 +81,7 @@ impl<'a> MonitorCaptureSourceUpdater<'a> {
 impl MonitorCaptureSourceBuilder {
     /// Sets the capture method for the monitor capture source.
     /// Only MethodWgc works for now as the other DXGI method does not work and only records a black screen (Failed to DuplicateOutput1)
-    /// Workaround for black screen bug: [issue](https://github.com/joshprk/libobs-rs/issues/5)
+    /// Workaround for black screen bug: [issue](https://github.com/libobs-rs/libobs-rs/issues/5)
     pub fn set_capture_method(mut self, method: ObsDisplayCaptureMethod) -> Self {
         self.capture_method = Some(method);
         self

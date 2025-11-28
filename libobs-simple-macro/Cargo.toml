@@ -1,9 +1,10 @@
 [package]
 name = "libobs-simple-macro"
 description = "Helper macro for libobs-simple"
-repository = "https://github.com/joshprk/libobs-rs"
+repository = "https://github.com/libobs-rs/libobs-rs"
+documentation = "https://sshcrack.github.io/libobs-docs/libobs_simple_macro/"
 readme = "README.md"
-authors = ["sshcrack"]
+authors = ["Hendrik Lind <hendrik@sshcrack.me>"]
 categories = ["multimedia::video", "multimedia::audio", "multimedia", "multimedia::encoding"]
 keywords = ["obs", "libobs", "video", "recording", "screen-recording"]
 license = "GPL-3.0"

@@ -7,7 +7,7 @@ use super::ObsError;
 
 pub trait ObsUpdatable {
     /// Updates the object with the current settings.
-    /// For examples please take a look at the [Github repository](https://github.com/joshprk/libobs-rs/blob/main/examples).
+    /// For examples please take a look at the [Github repository](https://github.com/libobs-rs/libobs-rs/blob/main/examples).
     fn create_updater<'a, T: ObsObjectUpdater<'a, ToUpdate = Self> + Send + Sync>(
         &'a mut self,
     ) -> Result<T, ObsError>

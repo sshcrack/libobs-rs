@@ -1,10 +1,10 @@
 [package]
 name = "cargo-obs-build"
 description = "A library and CLI tool used to build the libobs library and put it in the target directory"
-version = "2.0.0"
+version = "2.0.1"
 readme = "README.md"
 license = "MIT"
-repository = "https://github.com/joshprk/libobs-rs"
+repository = "https://github.com/libobs-rs/libobs-rs"
 authors = ["sshcrack"]
 keywords = ["obs", "libobs", "video", "build", "prepare"]
 edition = "2021"

@@ -68,7 +68,7 @@ Ignore if this is the first run.",
         }
         println!("cargo:warning=");
         println!("cargo:warning=For detailed setup instructions, see:");
-        println!("cargo:warning=https://github.com/joshprk/libobs-rs/blob/main/cargo-obs-build/CI_SETUP.md");
+        println!("cargo:warning=https://github.com/libobs-rs/libobs-rs/blob/main/cargo-obs-build/CI_SETUP.md");
         println!("cargo:warning=");
     }
 }
