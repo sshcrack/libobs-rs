@@ -1,7 +1,7 @@
 # libobs-rs
-![Build](https://img.shields.io/github/actions/workflow/status/libobs-rs/libobs-rs/validation.yml?branch=main&label=build&style=flat)
-![Docs](https://img.shields.io/github/actions/workflow/status/libobs-rs/libobs-rs/build-docs.yml?branch=main&label=docs&style=flat)
-![Coverage](https://img.shields.io/badge/coverage-55%25-orange?style=flat)
+![Build](https://img.shields.io/github/actions/workflow/status/libobs-rs/libobs-rs/validation.yml?branch=main&label=build&style=for-the-badge)
+[![Docs](https://img.shields.io/badge/docs-passing-brightgreen?style=for-the-badge)](https://sshcrack.github.io/libobs-docs/libobs_wrapper/)
+![Coverage](https://img.shields.io/badge/coverage-55%25-orange?style=for-the-badge)
 
 > [!NOTE]
 > Need help? [Join our discord server!](https://discord.gg/rsTffTMPMF) 
