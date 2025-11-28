@@ -148,7 +148,7 @@ pub fn obs_object_updater(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Each field in the struct must be annotated with `#[obs_property(type_t = "...")]`.
 /// Supported `type_t` values:
 ///
-/// ```
+/// ```rust
 /// use libobs_wrapper::data::StringEnum;
 /// use libobs_simple_macro::obs_object_builder;
 /// use num_derive::{FromPrimitive, ToPrimitive};
@@ -184,7 +184,6 @@ pub fn obs_object_updater(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     /// Sets the capture method for the window capture
 ///     capture_method: ObsWindowCaptureMethod,
 ///
-/// ```ignore
 /// #[obs_object_builder("my_source")]
 /// pub struct MySourceBuilder {
 ///     #[obs_property(type_t = "string")]

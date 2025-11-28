@@ -85,7 +85,6 @@ enum ObsCommand {
 ///
 /// When the last `ObsRuntime` instance is dropped, the OBS thread is automatically
 /// shut down and all OBS resources are properly released.
-/// ```
 #[derive(Debug, Clone)]
 pub struct ObsRuntime {
     #[cfg(feature = "enable_runtime")]
