@@ -4,9 +4,9 @@ use std::fmt::Display;
 use num_derive::{FromPrimitive, ToPrimitive};
 
 #[cfg(target_os = "windows")]
-pub(crate) type OsEnumType = i32;
+pub(crate) type OsEnumType = std::os::raw::c_int;
 #[cfg(not(target_os = "windows"))]
-pub(crate) type OsEnumType = u32;
+pub(crate) type OsEnumType = std::os::raw::c_uint;
 
 #[cfg_attr(target_os = "windows", repr(i32))]
 #[cfg_attr(not(target_os = "windows"), repr(u32))]
@@ -248,4 +248,48 @@ impl ObsLogLevel {
             ObsLogLevel::Debug => s.blue().to_string(),
         }
     }
+}
+
+#[cfg_attr(target_os = "windows", repr(i32))]
+#[cfg_attr(not(target_os = "windows"), repr(u32))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+/// Used with scene items to indicate the type of bounds to use for scene items.
+/// Mostly determines how the image will be scaled within those bounds, or
+/// whether to use bounds at all.
+pub enum ObsBounds {
+    /// No bounds
+    None = libobs::obs_bounds_type_OBS_BOUNDS_NONE,
+    /// stretch (ignores base scale)
+    Stretch = libobs::obs_bounds_type_OBS_BOUNDS_STRETCH,
+    /// scales to inner rectangle
+    ScaleInner = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_INNER,
+    /// scales to outer rectangle
+    ScaleOuter = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_OUTER,
+    /// scales to the width
+    ScaleToWidth = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_TO_WIDTH,
+    /// scales to the height
+    ScaleToHeight = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_TO_HEIGHT,
+    /// no scaling, maximum size only
+    MaxOnly = libobs::obs_bounds_type_OBS_BOUNDS_MAX_ONLY,
+}
+
+#[cfg_attr(target_os = "windows", repr(i32))]
+#[cfg_attr(not(target_os = "windows"), repr(u32))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+pub enum ObsBoundsType {
+    None = libobs::obs_bounds_type_OBS_BOUNDS_NONE,
+    Stretch = libobs::obs_bounds_type_OBS_BOUNDS_STRETCH,
+    ScaleInner = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_INNER,
+    ScaleOuter = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_OUTER,
+    ScaleToWidth = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_TO_WIDTH,
+    ScaleToHeight = libobs::obs_bounds_type_OBS_BOUNDS_SCALE_TO_HEIGHT,
+    MaxOnly = libobs::obs_bounds_type_OBS_BOUNDS_MAX_ONLY,
+}
+
+pub mod obs_alignment {
+    pub const LEFT: u32 = libobs::OBS_ALIGN_LEFT;
+    pub const TOP: u32 = libobs::OBS_ALIGN_TOP;
+    pub const RIGHT: u32 = libobs::OBS_ALIGN_RIGHT;
+    pub const BOTTOM: u32 = libobs::OBS_ALIGN_BOTTOM;
+    pub const CENTER: u32 = libobs::OBS_ALIGN_CENTER;
 }

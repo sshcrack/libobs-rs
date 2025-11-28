@@ -9,7 +9,6 @@ use libobs::obs_properties;
 use macros::*;
 
 pub use enums::*;
-use num_traits::FromPrimitive;
 use types::*;
 
 use crate::{
@@ -83,13 +82,9 @@ pub(crate) fn get_properties_inner(
 
             let p_type = unsafe { libobs::obs_property_get_type(property) };
 
-            #[cfg(target_family = "windows")]
-            let p_type = ObsPropertyType::from_i32(p_type);
+            let p_type = crate::macros::enum_from_number!(ObsPropertyType, p_type);
 
-            #[cfg(not(target_family = "windows"))]
-            let p_type = ObsPropertyType::from_u32(p_type);
-
-            println!("Property: {:?}", name);
+            log::trace!("Property: {:?}", name);
             match p_type {
                 Some(p_type) => {
                     result.insert(name, unsafe { p_type.to_property_struct(property) });

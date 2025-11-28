@@ -1,4 +1,4 @@
-use libobs_sources::linux::{PipeWireScreenCaptureSourceBuilder, PipeWireSourceExtTrait};
+use libobs_simple::sources::linux::{PipeWireScreenCaptureSourceBuilder, PipeWireSourceExtTrait};
 use libobs_wrapper::context::ObsContext;
 use libobs_wrapper::encoders::ObsContextEncoders;
 use libobs_wrapper::logger::ObsLogger;

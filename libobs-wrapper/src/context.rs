@@ -26,8 +26,10 @@
 //! ```no_run
 //! # fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! use libobs_wrapper::context::ObsContext;
+//! use libobs_wrapper::utils::StartupInfo;
 //!
-//! let context = ObsContext::builder().start()?;
+//! let info = StartupInfo::default();
+//! let context = ObsContext::new(info)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -54,7 +56,7 @@ use crate::{
     utils::{FilterInfo, ObsError, ObsModules, ObsString, OutputInfo, StartupInfo},
 };
 use getters0::Getters;
-use libobs::{audio_output, obs_scene_t, video_output};
+use libobs::{audio_output, video_output};
 
 lazy_static::lazy_static! {
     pub(crate) static ref OBS_THREAD_ID: Mutex<Option<ThreadId>> = Mutex::new(None);
@@ -94,7 +96,8 @@ pub struct ObsContext {
     pub(crate) filters: Arc<RwLock<Vec<ObsFilterRef>>>,
 
     #[skip_getter]
-    pub(crate) active_scene: Arc<RwLock<Option<Sendable<*mut obs_scene_t>>>>,
+    /// Contains active scenes mapped by their channel they are bound to
+    pub(crate) active_scenes: Arc<RwLock<HashMap<u32, ObsSceneRef>>>,
 
     #[skip_getter]
     pub(crate) _obs_modules: Arc<ObsModules>,
@@ -156,6 +159,8 @@ impl ObsContext {
     ///
     /// On Linux, make sure to call `ObsContext::check_version_compatibility` before
     /// initializing the context. If that method returns false, it may be possible for the binary to crash.
+    ///
+    /// If initialization fails, an `ObsError` is returned.
     pub fn new(info: StartupInfo) -> Result<ObsContext, ObsError> {
         // Spawning runtime, I'll keep this as function for now
         let (runtime, obs_modules, info) = ObsRuntime::startup(info)?;
@@ -166,16 +171,16 @@ impl ObsContext {
             None
         };
 
+        let active_scenes: Arc<RwLock<HashMap<u32, ObsSceneRef>>> = Default::default();
         Ok(Self {
             _obs_modules: Arc::new(obs_modules),
-            active_scene: Default::default(),
+            active_scenes: active_scenes.clone(),
             displays: Default::default(),
             outputs: Default::default(),
             scenes: Default::default(),
             filters: Default::default(),
-            runtime,
+            runtime: runtime.clone(),
             startup_info: Arc::new(RwLock::new(info)),
-
             #[cfg(target_os = "linux")]
             glib_loop: Arc::new(RwLock::new(linux_opt)),
         })
@@ -524,7 +529,11 @@ impl ObsContext {
         &mut self,
         name: T,
     ) -> Result<ObsSceneRef, ObsError> {
-        let scene = ObsSceneRef::new(name.into(), self.active_scene.clone(), self.runtime.clone())?;
+        let scene = ObsSceneRef::new(
+            name.into(),
+            self.active_scenes.clone(),
+            self.runtime.clone(),
+        )?;
 
         let tmp = scene.clone();
         self.scenes

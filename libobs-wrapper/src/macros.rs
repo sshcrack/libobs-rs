@@ -80,3 +80,40 @@ macro_rules! impl_obs_drop {
         }
     };
 }
+
+macro_rules! impl_eq_of_ptr {
+    ($struct: ty, $ptr: ident) => {
+        impl PartialEq for $struct {
+            fn eq(&self, other: &Self) -> bool {
+                self.$ptr.0 == other.$ptr.0
+            }
+        }
+
+        impl Eq for $struct {}
+
+        impl Hash for $struct {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                self.$ptr.0.hash(state);
+            }
+        }
+    };
+}
+
+#[cfg(windows)]
+macro_rules! enum_from_number {
+    ($var: ident, $numb: expr) => {{
+        use num_traits::FromPrimitive;
+        $var::from_i32($numb)
+    }};
+}
+
+#[cfg(not(windows))]
+macro_rules! enum_from_number {
+    ($var: ident, $numb: expr) => {{
+        use num_traits::FromPrimitive;
+        $var::from_u32($numb)
+    }};
+}
+
+pub(crate) use enum_from_number;
+pub(crate) use impl_eq_of_ptr;

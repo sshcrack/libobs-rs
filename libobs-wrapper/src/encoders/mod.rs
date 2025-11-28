@@ -1,14 +1,11 @@
-use std::{ffi::CStr, os::raw::c_char};
-
-use num_traits::ToPrimitive;
-
 use crate::{
     context::ObsContext,
-    enums::ObsEncoderType,
+    enums::{ObsEncoderType, OsEnumType},
     run_with_obs,
     runtime::ObsRuntime,
     utils::{ObsError, ENCODER_HIDE_FLAGS},
 };
+use std::{ffi::CStr, os::raw::c_char};
 
 pub mod audio;
 mod enums;
@@ -31,11 +28,7 @@ fn get_encoders_raw(
     encoder_type: ObsEncoderType,
     runtime: &ObsRuntime,
 ) -> Result<Vec<String>, ObsError> {
-    #[cfg(target_os = "windows")]
-    let type_primitive = encoder_type.to_i32().unwrap();
-
-    #[cfg(not(target_os = "windows"))]
-    let type_primitive = encoder_type.to_u32().unwrap();
+    let type_primitive = encoder_type as OsEnumType;
 
     run_with_obs!(runtime, move || {
         let mut n = 0;

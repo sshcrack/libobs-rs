@@ -1,7 +1,6 @@
 use libobs::gs_init_data;
-use num_traits::ToPrimitive;
 
-use crate::display::ObsWindowHandle;
+use crate::{display::ObsWindowHandle, enums::OsEnumType};
 
 use super::{GsColorFormat, GsZstencilFormat};
 
@@ -94,17 +93,8 @@ impl ObsDisplayCreationData {
         CloneableGsInitData(gs_init_data {
             cx: self.width,
             cy: self.height,
-            #[cfg(target_family = "windows")]
-            format: self.format.to_i32().unwrap(),
-
-            #[cfg(not(target_family = "windows"))]
-            format: self.format.to_u32().unwrap(),
-
-            #[cfg(not(target_family = "windows"))]
-            zsformat: self.zsformat.to_u32().unwrap(),
-
-            #[cfg(target_family = "windows")]
-            zsformat: self.zsformat.to_i32().unwrap(),
+            format: self.format as OsEnumType,
+            zsformat: self.zsformat as OsEnumType,
 
             window: window_override
                 .map(|s| s.window.0)

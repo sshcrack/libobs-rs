@@ -2,17 +2,19 @@
 
 use std::{thread::sleep, time::Duration};
 
-use libobs_sources::{
-    ObsSourceBuilder,
-    windows::{MonitorCaptureSourceBuilder, ObsDisplayCaptureMethod},
+use libobs_simple::{
+    output::simple::ObsContextSimpleExt,
+    sources::{
+        ObsSourceBuilder,
+        windows::{MonitorCaptureSourceBuilder, ObsDisplayCaptureMethod},
+    },
 };
 use libobs_wrapper::{
-    Vec2,
     context::ObsContext,
     data::properties::{ObsProperty, ObsPropertyObject, types::ObsListItemValue},
     encoders::{ObsAudioEncoderType, ObsVideoEncoderType},
     sources::ObsSourceRef,
-    utils::{AudioEncoderInfo, ObsPath, OutputInfo, StartupInfo, VideoEncoderInfo},
+    utils::{AudioEncoderInfo, ObsPath, StartupInfo, VideoEncoderInfo},
 };
 
 pub fn main() -> anyhow::Result<()> {
@@ -23,12 +25,13 @@ pub fn main() -> anyhow::Result<()> {
 
     // Create a new main scene
     let mut scene = context.scene("MAIN")?;
-    // Set the scene as main channel for video and audio output
+    // Set the scene as main channel for video
     scene.set_to_channel(0)?;
-    scene.set_to_channel(1)?;
 
-    // Add a ffmpeg_muxer output
-    let mut output = context.output(OutputInfo::new("ffmpeg_muxer", "MAIN", None, None))?;
+    // Add a output
+    let mut output = context
+        .simple_output_builder("obs-flow-output", ObsPath::new("obs-flow-example.mp4"))
+        .build()?;
 
     // Read all the properties of source type or encoders
     let source = context
@@ -86,8 +89,7 @@ pub fn main() -> anyhow::Result<()> {
     let scale = scene.get_source_scale(&source)?;
     println!("Scale: {:?}", scale);
 
-    scene.set_source_position(&source, Vec2::new(5.0, 5.0))?;
-    scene.set_source_scale(&source, Vec2::new(0.5, 0.5))?;
+    scene.fit_source_to_screen(&source)?;
 
     output.start()?;
 

@@ -1,10 +1,11 @@
-use libobs_wrapper::context::ObsContext;
-use libobs_wrapper::encoders::ObsContextEncoders;
+use libobs_simple::output::simple::ObsContextSimpleExt;
+#[cfg(target_os = "linux")]
 use libobs_wrapper::logger::ObsLogger;
-use libobs_wrapper::utils::{AudioEncoderInfo, ObsPath, OutputInfo, StartupInfo};
+use libobs_wrapper::utils::StartupInfo;
+use libobs_wrapper::{context::ObsContext, utils::ObsPath};
 
 #[cfg(windows)]
-use libobs_sources::windows::{MonitorCaptureSourceBuilder, MonitorCaptureSourceUpdater};
+use libobs_simple::sources::windows::{MonitorCaptureSourceBuilder, MonitorCaptureSourceUpdater};
 #[cfg(windows)]
 use libobs_wrapper::data::ObsObjectUpdater;
 #[cfg(windows)]
@@ -13,21 +14,26 @@ use libobs_wrapper::sources::ObsSourceBuilder;
 use libobs_wrapper::utils::traits::ObsUpdatable;
 
 #[cfg(target_os = "linux")]
-use libobs_sources::linux::LinuxGeneralScreenCapture;
+use libobs_simple::sources::linux::LinuxGeneralScreenCapture;
 #[cfg(target_os = "linux")]
 use std::io::{self, Write};
 
+#[cfg(target_os = "linux")]
 #[derive(Debug)]
 pub struct NoLogger {}
+#[cfg(target_os = "linux")]
 impl ObsLogger for NoLogger {
     fn log(&mut self, _level: libobs_wrapper::enums::ObsLogLevel, _msg: String) {}
 }
 
 fn main() -> anyhow::Result<()> {
     // Start the OBS context
-    let startup_info = StartupInfo::default()
-        // FIXME This is not recommended in production. This is just for the purpose of this example.
-        .set_logger(Box::new(NoLogger {}));
+    let startup_info = StartupInfo::default();
+
+    // FIXME This is not recommended in production. This is just for the purpose of this example.
+    #[cfg(target_os = "linux")]
+    let startup_info = startup_info.set_logger(Box::new(NoLogger {}));
+
     let mut context = ObsContext::new(startup_info)?;
 
     let mut scene = context.scene("main")?;
@@ -64,37 +70,9 @@ fn main() -> anyhow::Result<()> {
     scene.set_to_channel(0)?;
 
     // Set up output to ./recording.mp4
-    let mut output_settings = context.data()?;
-    output_settings.set_string("path", ObsPath::from_relative("recording.mp4").build())?;
-
-    let output_info = OutputInfo::new("ffmpeg_muxer", "output", Some(output_settings), None);
-    let mut output = context.output(output_info)?;
-
-    // Register the video encoder
-    let mut video_settings = context.data()?;
-    video_settings
-        .bulk_update()
-        .set_int("bf", 2)
-        .set_bool("psycho_aq", true)
-        .set_bool("lookahead", true)
-        .set_string("profile", "high")
-        .set_string("preset", "hq")
-        .set_string("rate_control", "cbr")
-        .set_int("bitrate", 10000)
-        .update()?;
-
-    let mut video_encoder = context.best_video_encoder()?;
-    video_encoder.set_settings(video_settings);
-    video_encoder.set_to_output(&mut output, "video_encoder")?;
-
-    // Register the audio encoder
-    let mut audio_settings = context.data()?;
-    audio_settings.set_int("bitrate", 160)?;
-
-    let audio_info =
-        AudioEncoderInfo::new("ffmpeg_aac", "audio_encoder", Some(audio_settings), None);
-
-    output.create_and_set_audio_encoder(audio_info, 0)?;
+    let mut output = context
+        .simple_output_builder("monitor-capture-output", ObsPath::new("record.mp4"))
+        .build()?;
 
     output.start()?;
 

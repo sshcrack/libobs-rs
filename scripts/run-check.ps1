@@ -1,0 +1,1 @@
+cargo hack check --feature-powerset --no-dev-deps --all --skip generate_bindings,include_win_bindings

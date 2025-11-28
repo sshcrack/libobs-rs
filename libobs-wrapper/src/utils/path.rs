@@ -98,3 +98,9 @@ impl From<ObsPath> for ObsString {
         val.build()
     }
 }
+
+impl From<ObsPath> for PathBuf {
+    fn from(val: ObsPath) -> Self {
+        val.path
+    }
+}

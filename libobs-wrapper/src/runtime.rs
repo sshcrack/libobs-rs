@@ -111,10 +111,9 @@ impl ObsRuntime {
     ///
     /// # Returns
     ///
-    /// A `Result` containing either:
-    /// - `ObsRuntimeReturn::Done` with the initialized runtime, modules, and startup info
-    /// - `ObsRuntimeReturn::Restart` if OBS needs to be updated and the application should restart
-    /// - An `ObsError` if initialization fails
+    /// A `Result` containing:
+    /// - `(ObsRuntime, ObsModules, StartupInfo)`: The initialized runtime, loaded modules, and startup info.
+    /// - `ObsError`: If initialization fails.
     ///
     /// # Examples
     ///
@@ -125,11 +124,8 @@ impl ObsRuntime {
     /// fn initialize() {
     ///     let startup_info = StartupInfo::default();
     ///     match ObsRuntime::startup(startup_info) {
-    ///         Ok(ObsRuntimeReturn::Done(runtime_components)) => {
+    ///         Ok((runtime, modules, info)) => {
     ///             // Use the initialized runtime
-    ///         },
-    ///         Ok(ObsRuntimeReturn::Restart) => {
-    ///             // Handle restart for OBS update
     ///         },
     ///         Err(e) => {
     ///             // Handle initialization error

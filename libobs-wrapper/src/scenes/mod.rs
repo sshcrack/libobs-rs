@@ -1,15 +1,24 @@
+mod transform_info;
+pub use transform_info::*;
+
+use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
+use std::hash::Hash;
 use std::sync::{Arc, RwLock};
 
 use getters0::Getters;
-use libobs::{obs_scene_t, obs_source_t};
+use libobs::{obs_scene_item, obs_scene_t, obs_source_t, obs_transform_info, obs_video_info};
 
+use crate::enums::ObsBoundsType;
+use crate::macros::impl_eq_of_ptr;
+use crate::unsafe_send::SendableComp;
 use crate::{
+    graphics::Vec2,
     impl_obs_drop, impl_signal_manager, run_with_obs,
     runtime::ObsRuntime,
     sources::{ObsFilterRef, ObsSourceRef},
     unsafe_send::Sendable,
     utils::{ObsError, ObsString, SourceInfo},
-    Vec2,
 };
 
 #[derive(Debug)]
@@ -20,17 +29,6 @@ struct _SceneDropGuard {
 
 impl_obs_drop!(_SceneDropGuard, (scene), move || unsafe {
     let scene_source = libobs::obs_scene_get_source(scene);
-    for i in 0..libobs::MAX_CHANNELS {
-        let inner_ptr = libobs::obs_get_output_source(i);
-
-        //TODO ensure the output has stopped
-        if inner_ptr == scene_source {
-            println!("Removing scene from output channel {}", i);
-            libobs::obs_set_output_source(i, std::ptr::null_mut());
-        }
-
-        libobs::obs_source_release(inner_ptr);
-    }
 
     libobs::obs_source_release(scene_source);
     libobs::obs_scene_release(scene);
@@ -40,12 +38,13 @@ impl_obs_drop!(_SceneDropGuard, (scene), move || unsafe {
 #[skip_new]
 pub struct ObsSceneRef {
     #[skip_getter]
-    scene: Arc<Sendable<*mut obs_scene_t>>,
+    pub(crate) scene: Arc<Sendable<*mut obs_scene_t>>,
     name: ObsString,
     #[get_mut]
-    pub(crate) sources: Arc<RwLock<Vec<ObsSourceRef>>>,
+    pub(crate) sources: Arc<RwLock<HashSet<ObsSourceRef>>>,
     #[skip_getter]
-    pub(crate) active_scene: Arc<RwLock<Option<Sendable<*mut obs_scene_t>>>>,
+    /// Maps the currently current active scenes by their channel (this is a shared reference between all scenes)
+    pub(crate) active_scenes: Arc<RwLock<HashMap<u32, ObsSceneRef>>>,
 
     #[skip_getter]
     _guard: Arc<_SceneDropGuard>,
@@ -56,10 +55,12 @@ pub struct ObsSceneRef {
     pub(crate) signals: Arc<ObsSceneSignals>,
 }
 
+impl_eq_of_ptr!(ObsSceneRef, scene);
+
 impl ObsSceneRef {
     pub(crate) fn new(
         name: ObsString,
-        active_scene: Arc<RwLock<Option<Sendable<*mut obs_scene_t>>>>,
+        active_scenes: Arc<RwLock<HashMap<u32, ObsSceneRef>>>,
         runtime: ObsRuntime,
     ) -> Result<Self, ObsError> {
         let name_ptr = name.as_ptr();
@@ -71,8 +72,8 @@ impl ObsSceneRef {
         Ok(Self {
             name,
             scene: Arc::new(scene.clone()),
-            sources: Arc::new(RwLock::new(vec![])),
-            active_scene: active_scene.clone(),
+            sources: Arc::new(RwLock::new(HashSet::new())),
+            active_scenes,
             _guard: Arc::new(_SceneDropGuard {
                 scene,
                 runtime: runtime.clone(),
@@ -87,13 +88,25 @@ impl ObsSceneRef {
         self.set_to_channel(channel)
     }
 
+    /// Sets this scene to a given output channel.
+    /// There are 64
+    /// channels that you can assign scenes to, which will draw on top of each
+    /// other in ascending index order.
     pub fn set_to_channel(&self, channel: u32) -> Result<(), ObsError> {
-        let mut s = self
-            .active_scene
-            .write()
-            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?;
+        if channel >= libobs::MAX_CHANNELS {
+            return Err(ObsError::InvalidOperation(format!(
+                "Channel {} is out of bounds (max {})",
+                channel,
+                libobs::MAX_CHANNELS - 1
+            )));
+        }
 
-        *s = Some(self.as_ptr());
+        // let mut s = self
+        //     .active_scenes
+        //     .write()
+        //     .map_err(|e| ObsError::LockError(format!("{:?}", e)))?;
+
+        // s.insert(channel, self.clone());
 
         let scene_source_ptr = self.get_scene_source_ptr()?;
         run_with_obs!(self.runtime, (scene_source_ptr), move || unsafe {
@@ -101,6 +114,29 @@ impl ObsSceneRef {
         })
     }
 
+    /// Removes a scene from a given output channel, for more info about channels see `set_to_channel`.
+    pub fn remove_from_channel(&self, channel: u32) -> Result<(), ObsError> {
+        if channel >= libobs::MAX_CHANNELS {
+            return Err(ObsError::InvalidOperation(format!(
+                "Channel {} is out of bounds (max {})",
+                channel,
+                libobs::MAX_CHANNELS - 1
+            )));
+        }
+
+        let mut s = self
+            .active_scenes
+            .write()
+            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?;
+
+        s.remove(&channel);
+
+        run_with_obs!(self.runtime, (), move || unsafe {
+            libobs::obs_set_output_source(channel, std::ptr::null_mut());
+        })
+    }
+
+    /// Gets the underlying source pointer of this scene, which is used internally when setting it to a channel.
     pub fn get_scene_source_ptr(&self) -> Result<Sendable<*mut obs_source_t>, ObsError> {
         let scene_ptr = self.scene.clone();
         run_with_obs!(self.runtime, (scene_ptr), move || unsafe {
@@ -108,8 +144,11 @@ impl ObsSceneRef {
         })
     }
 
+    /// Adds and creates the specified source to this scene. Returns a reference to the created source. The source is also stored internally in this scene.
+    ///
+    /// If you need to remove the source later, use `remove_source`.
     pub fn add_source(&mut self, info: SourceInfo) -> Result<ObsSourceRef, ObsError> {
-        let mut source = ObsSourceRef::new(
+        let source = ObsSourceRef::new(
             info.id,
             info.name,
             info.settings,
@@ -128,41 +167,45 @@ impl ObsSceneRef {
             return Err(ObsError::NullPointer);
         }
 
-        source.scene_item = Some(ptr.clone());
+        //TODO We should clear one reference because with this obs doesn't clean up properly
+        source
+            .scene_items
+            .write()
+            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?
+            .insert(SendableComp(self.scene.0), ptr.clone());
+
         self.sources
             .write()
             .map_err(|e| ObsError::LockError(format!("{:?}", e)))?
-            .push(source.clone());
+            .insert(source.clone());
         Ok(source)
     }
 
-    pub fn get_source_by_index(&self, index: usize) -> Result<Option<ObsSourceRef>, ObsError> {
-        let r = self
-            .sources
-            .read()
-            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?
-            .get(index)
-            .cloned();
-        Ok(r)
-    }
-
+    /// Gets a source by name from this scene. Returns None if no source with the given name exists in this scene.
     pub fn get_source_mut(&self, name: &str) -> Result<Option<ObsSourceRef>, ObsError> {
         let r = self
             .sources
             .read()
             .map_err(|e| ObsError::LockError(format!("{:?}", e)))?
             .iter()
-            .find(|x| x.name() == name)
+            .find(|s| s.name() == name)
             .cloned();
 
         Ok(r)
     }
 
+    /// Removes the given source from this scene. Removes the corresponding scene item as well. It may be possible that this source is still added to another scene.
     pub fn remove_source(&mut self, source: &ObsSourceRef) -> Result<(), ObsError> {
-        let scene_item = source.scene_item.clone();
-        let Some(scene_item_ptr) = scene_item else {
-            return Err(ObsError::SourceNotFound);
-        };
+        let scene_items = source
+            .scene_items
+            .read()
+            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?;
+
+        let sendable_comp = SendableComp(self.scene.0);
+        let scene_item_ptr = scene_items
+            .get(&sendable_comp)
+            .ok_or(ObsError::SourceNotFound)?
+            .clone();
 
         run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
             // Remove the scene item
@@ -171,10 +214,23 @@ impl ObsSceneRef {
             libobs::obs_sceneitem_release(scene_item_ptr);
         })?;
 
+        // We need to make sure to remove references from both the scene and the source
+        self.sources
+            .write()
+            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?
+            .remove(source);
+
+        source
+            .scene_items
+            .write()
+            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?
+            .remove(&sendable_comp);
+
         Ok(())
     }
 
-    pub fn add_source_filter(
+    /// Adds a filter to the given source in this scene.
+    pub fn add_scene_filter(
         &self,
         source: &ObsSourceRef,
         filter_ref: &ObsFilterRef,
@@ -187,7 +243,8 @@ impl ObsSceneRef {
         Ok(())
     }
 
-    pub fn remove_source_filter(
+    /// Removes a filter from the this scene (internally removes the filter to the scene's source).
+    pub fn remove_scene_filter(
         &self,
         source: &ObsSourceRef,
         filter_ref: &ObsFilterRef,
@@ -200,11 +257,43 @@ impl ObsSceneRef {
         Ok(())
     }
 
+    /// Gets the underlying scene item pointer for the given source in this scene.
+    ///
+    /// A scene item is basically the representation of a source within this scene. It holds information about the position, scale, rotation, etc.
+    pub fn get_scene_item_ptr(
+        &self,
+        source: &ObsSourceRef,
+    ) -> Result<Sendable<*mut obs_scene_item>, ObsError> {
+        let scene_items = source
+            .scene_items
+            .read()
+            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?;
+
+        let sendable_comp = SendableComp(self.scene.0);
+        let scene_item_ptr = scene_items
+            .get(&sendable_comp)
+            .ok_or(ObsError::SourceNotFound)?
+            .clone();
+
+        Ok(scene_item_ptr)
+    }
+
+    /// Gets the transform info of the given source in this scene.
+    pub fn get_transform_info(&self, source: &ObsSourceRef) -> Result<ObsTransformInfo, ObsError> {
+        let scene_item_ptr = self.get_scene_item_ptr(source)?;
+
+        let item_info = run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
+            let mut item_info: obs_transform_info = std::mem::zeroed();
+            libobs::obs_sceneitem_get_info2(scene_item_ptr, &mut item_info);
+            ObsTransformInfo(item_info)
+        })?;
+
+        Ok(item_info)
+    }
+
+    /// Gets the position of the given source in this scene.
     pub fn get_source_position(&self, source: &ObsSourceRef) -> Result<Vec2, ObsError> {
-        let scene_item = source.scene_item.clone();
-        let Some(scene_item_ptr) = scene_item else {
-            return Err(ObsError::SourceNotFound);
-        };
+        let scene_item_ptr = self.get_scene_item_ptr(source)?;
 
         let position = run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
             let mut main_pos: libobs::vec2 = std::mem::zeroed();
@@ -215,11 +304,9 @@ impl ObsSceneRef {
         Ok(position)
     }
 
+    /// Gets the scale of the given source in this scene.
     pub fn get_source_scale(&self, source: &ObsSourceRef) -> Result<Vec2, ObsError> {
-        let scene_item = source.scene_item.clone();
-        let Some(scene_item_ptr) = scene_item else {
-            return Err(ObsError::SourceNotFound);
-        };
+        let scene_item_ptr = self.get_scene_item_ptr(source)?;
 
         let scale = run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
             let mut main_pos: libobs::vec2 = std::mem::zeroed();
@@ -230,15 +317,13 @@ impl ObsSceneRef {
         Ok(scale)
     }
 
+    /// Sets the position of the given source in this scene.
     pub fn set_source_position(
         &self,
         source: &ObsSourceRef,
         position: Vec2,
     ) -> Result<(), ObsError> {
-        let scene_item = source.scene_item.clone();
-        let Some(scene_item_ptr) = scene_item else {
-            return Err(ObsError::SourceNotFound);
-        };
+        let scene_item_ptr = self.get_scene_item_ptr(source)?;
 
         run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
             libobs::obs_sceneitem_set_pos(scene_item_ptr, &position.into());
@@ -247,17 +332,70 @@ impl ObsSceneRef {
         Ok(())
     }
 
+    /// Sets the scale of the given source in this scene.
     pub fn set_source_scale(&self, source: &ObsSourceRef, scale: Vec2) -> Result<(), ObsError> {
-        let scene_item = source.scene_item.clone();
-        let Some(scene_item_ptr) = scene_item else {
-            return Err(ObsError::SourceNotFound);
-        };
+        let scene_item_ptr = self.get_scene_item_ptr(source)?;
 
         run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
             libobs::obs_sceneitem_set_scale(scene_item_ptr, &scale.into());
         })?;
 
         Ok(())
+    }
+
+    /// Sets the transform info of the given source in this scene.
+    /// The `ObsTransformInfo` can be built by using the `ObsTransformInfoBuilder`.
+    pub fn set_transform_info(
+        &self,
+        source: &ObsSourceRef,
+        info: &ObsTransformInfo,
+    ) -> Result<(), ObsError> {
+        let scene_item_ptr = self.get_scene_item_ptr(source)?;
+
+        let item_info = Sendable(info.clone());
+        run_with_obs!(self.runtime, (scene_item_ptr, item_info), move || unsafe {
+            libobs::obs_sceneitem_set_info2(scene_item_ptr, &item_info.0);
+        })?;
+
+        Ok(())
+    }
+
+    /// Fits the given source to the screen size.
+    /// If the source is locked, no action is taken.
+    ///
+    /// Returns `Ok(true)` if the source was resized, `Ok(false)` if the source was locked and not resized.
+    pub fn fit_source_to_screen(&self, source: &ObsSourceRef) -> Result<bool, ObsError> {
+        let scene_item_ptr = self.get_scene_item_ptr(source)?;
+
+        let is_locked = {
+            run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
+                libobs::obs_sceneitem_locked(scene_item_ptr)
+            })?
+        };
+
+        if is_locked {
+            return Ok(false);
+        }
+
+        let ovi = run_with_obs!(self.runtime, (), move || unsafe {
+            let mut ovi = std::mem::MaybeUninit::<obs_video_info>::uninit();
+            libobs::obs_get_video_info(ovi.as_mut_ptr());
+
+            Sendable(ovi.assume_init())
+        })?;
+
+        let bounds_crop = run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
+            libobs::obs_sceneitem_get_bounds_crop(scene_item_ptr)
+        })?;
+
+        // We are not constructing it from the source here because we want to reset full transform (so we use build instead of build_with_fallback)
+        let item_info = ObsTransformInfoBuilder::new()
+            .set_bounds_type(ObsBoundsType::ScaleInner)
+            .set_crop_to_bounds(bounds_crop)
+            .build(ovi.0.base_width, ovi.0.base_height);
+
+        self.set_transform_info(source, &item_info)?;
+        Ok(true)
     }
 
     pub fn as_ptr(&self) -> Sendable<*mut obs_scene_t> {
@@ -269,7 +407,7 @@ impl_signal_manager!(|scene_ptr| unsafe {
     let source_ptr = libobs::obs_scene_get_source(scene_ptr);
 
     libobs::obs_source_get_signal_handler(source_ptr)
-}, ObsSceneSignals for ObsSceneRef<*mut libobs::obs_scene_t>, [
+}, ObsSceneSignals for ObsSceneRef<*mut obs_scene_t>, [
     "item_add": {
         struct ItemAddSignal {
             POINTERS {

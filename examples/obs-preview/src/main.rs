@@ -1,8 +1,10 @@
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
+use std::thread::JoinHandle;
+use std::time::Duration;
 
 #[cfg(target_os = "linux")]
-use libobs_sources::linux::LinuxGeneralScreenCapture;
+use libobs_simple::sources::linux::LinuxGeneralScreenCapture;
 #[cfg(target_os = "linux")]
 use libobs_wrapper::utils::NixDisplay;
 
@@ -10,22 +12,20 @@ use libobs_wrapper::utils::NixDisplay;
 use libobs_wrapper::utils::traits::ObsUpdatable;
 
 #[cfg(windows)]
-use libobs_sources::windows::{
+use libobs_simple::sources::windows::{
     GameCaptureSourceBuilder, MonitorCaptureSourceBuilder, MonitorCaptureSourceUpdater,
     ObsGameCaptureMode, WindowSearchMode,
 };
 #[cfg(windows)]
-use libobs_sources::ObsObjectUpdater;
+use libobs_simple::sources::ObsObjectUpdater;
 use libobs_wrapper::data::video::ObsVideoInfoBuilder;
 use libobs_wrapper::display::{
     ObsDisplayCreationData, ObsDisplayRef, ObsWindowHandle, ShowHideTrait, WindowPositionTrait,
 };
-use libobs_wrapper::encoders::{ObsAudioEncoderType, ObsContextEncoders, ObsVideoEncoderType};
 #[cfg(windows)]
 use libobs_wrapper::sources::ObsSourceBuilder;
 use libobs_wrapper::sources::ObsSourceRef;
 use libobs_wrapper::unsafe_send::Sendable;
-use libobs_wrapper::utils::{AudioEncoderInfo, OutputInfo};
 use libobs_wrapper::{context::ObsContext, utils::StartupInfo};
 use winit::application::ApplicationHandler;
 use winit::dpi::LogicalSize;
@@ -36,12 +36,26 @@ use winit::raw_window_handle::{HasDisplayHandle, RawDisplayHandle};
 use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use winit::window::{Window, WindowId};
 
-#[derive(Clone)]
+struct SignalThreadGuard {
+    should_exit: Arc<AtomicBool>,
+    handle: Option<JoinHandle<()>>,
+}
+
+impl Drop for SignalThreadGuard {
+    fn drop(&mut self) {
+        self.should_exit.store(true, Ordering::Relaxed);
+        if let Some(handle) = self.handle.take() {
+            handle.join().unwrap();
+        }
+    }
+}
+
 struct ObsInner {
     context: ObsContext,
     display: ObsDisplayRef,
     #[cfg_attr(not(windows), allow(dead_code))]
     source: ObsSourceRef,
+    _guard: SignalThreadGuard,
 }
 
 impl ObsInner {
@@ -67,54 +81,9 @@ impl ObsInner {
 
         let mut context = info.start()?;
 
-        // Set up output to ./recording.mp4
-        let mut output_settings = context.data()?;
-        output_settings.set_string("path", "recording.mp4")?;
-
-        let output_info = OutputInfo::new("ffmpeg_muxer", "output", Some(output_settings), None);
-        let mut output = context.output(output_info)?;
-
-        // Register the video encoder
-        let mut video_settings = context.data()?;
-        video_settings
-            .bulk_update()
-            .set_int("bf", 0)
-            .set_bool("psycho_aq", true)
-            .set_bool("lookahead", true)
-            .set_string("profile", "high")
-            .set_string("preset", "fast")
-            .set_string("rate_control", "cbr")
-            .set_int("bitrate", 10000)
-            .update()?;
-
-        let encoders = context.available_video_encoders()?;
-
-        let mut encoder = encoders
-            .into_iter()
-            .find(|e| {
-                e.get_encoder_id() == &ObsVideoEncoderType::OBS_NVENC_H264_TEX
-                    || e.get_encoder_id() == &ObsVideoEncoderType::AV1_TEXTURE_AMF
-                    || e.get_encoder_id() == &ObsVideoEncoderType::OBS_X264
-            })
-            .unwrap();
-
-        encoder.set_settings(video_settings);
-
-        println!("Using encoder {:?}", encoder.get_encoder_id());
-        encoder.set_to_output(&mut output, "video_encoder")?;
-
-        // Register the audio encoder
-        let mut audio_settings = context.data()?;
-        audio_settings.set_int("bitrate", 160)?;
-
-        let audio_info = AudioEncoderInfo::new(
-            ObsAudioEncoderType::FFMPEG_AAC,
-            "audio_encoder",
-            Some(audio_settings),
-            None,
-        );
-
-        output.create_and_set_audio_encoder(audio_info, 0)?;
+        // You could also build an output and start recording/streaming right away here
+        //let _output = context.simple_output_builder("recording.mp4")
+        //    .build()?;
 
         let mut scene = context.scene("Main Scene")?;
 
@@ -143,8 +112,7 @@ impl ObsInner {
         .unwrap()
         .add_to_scene(&mut scene)?;
 
-        scene.set_source_position(&monitor_src, libobs_wrapper::Vec2::new(0.0, 0.0))?;
-        scene.set_source_scale(&monitor_src, libobs_wrapper::Vec2::new(1.0, 1.0))?;
+        scene.fit_source_to_screen(&monitor_src)?;
 
         #[cfg(windows)]
         let mut _apex_source = None;
@@ -160,8 +128,7 @@ impl ObsInner {
                 .set_window(apex)
                 .add_to_scene(&mut scene)?;
 
-            scene.set_source_position(&source, libobs_wrapper::Vec2::new(0.0, 0.0))?;
-            scene.set_source_scale(&source, libobs_wrapper::Vec2::new(1.0, 1.0))?;
+            scene.fit_source_to_screen(&source)?;
             _apex_source = Some(source);
         } else {
             println!("No Apex window found for game capture");
@@ -202,13 +169,19 @@ impl ObsInner {
 
         // Example for signals and events with libobs
         let tmp = monitor_src.clone();
-        std::thread::spawn(move || {
+        let should_exit = Arc::new(AtomicBool::new(false));
+        let thread_exit = should_exit.clone();
+        let handle = std::thread::spawn(move || {
             let signal_manager = tmp.signal_manager();
             let mut x = signal_manager.on_update().unwrap();
 
             println!("Listening for updates");
-            while x.blocking_recv().is_ok() {
-                println!("Monitor Source has been updated!");
+            while !thread_exit.load(Ordering::Relaxed) {
+                if x.try_recv().is_ok() {
+                    println!("Monitor Source has been updated!");
+                }
+
+                std::thread::sleep(Duration::from_millis(100));
             }
         });
 
@@ -219,6 +192,10 @@ impl ObsInner {
             #[cfg_attr(not(target_os = "linux"), allow(unused_unsafe))]
             display,
             source: monitor_src,
+            _guard: SignalThreadGuard {
+                should_exit,
+                handle: Some(handle),
+            },
         })
     }
 }
@@ -286,12 +263,12 @@ impl ApplicationHandler for App {
                         (width, height)
                     };
 
-                if let Some(obs) = self.obs.write().unwrap().clone() {
+                if let Some(obs) = self.obs.write().unwrap().as_ref() {
                     let _ = obs.display.set_size(display_width, display_height);
                 }
             }
             WindowEvent::Moved(_) => {
-                if let Some(obs) = self.obs.write().unwrap().clone() {
+                if let Some(obs) = self.obs.write().unwrap().as_ref() {
                     let _ = obs.display.update_color_space();
                 }
             }
@@ -304,11 +281,12 @@ impl ApplicationHandler for App {
                     #[cfg(windows)]
                     // Technically we could also switch monitors on X11, but we would like to keep it simple for now...
                     MouseButton::Left => {
-                        let inner = self.obs.write().unwrap().clone();
+                        let mut inner = self.obs.write().unwrap();
+                        let inner = inner.as_mut();
                         if let Some(inner) = inner {
                             let monitor_index = self.monitor_index.clone();
 
-                            let mut source = inner.source;
+                            let source = &mut inner.source;
                             let monitors = MonitorCaptureSourceBuilder::get_monitors().unwrap();
 
                             let monitor_index = monitor_index
@@ -325,7 +303,8 @@ impl ApplicationHandler for App {
                         }
                     }
                     MouseButton::Right => {
-                        let inner = self.obs.write().unwrap().clone();
+                        let inner = self.obs.write().unwrap();
+                        let inner = inner.as_ref();
                         if let Some(inner) = inner {
                             let display = inner.display.clone();
                             let pos = display.get_pos().unwrap();
@@ -339,9 +318,10 @@ impl ApplicationHandler for App {
                         }
                     }
                     MouseButton::Middle => {
-                        let inner = self.obs.write().unwrap().clone();
+                        let mut inner = self.obs.write().unwrap();
+                        let inner = inner.as_mut();
                         if let Some(inner) = inner {
-                            let mut display = inner.display;
+                            let display = &mut inner.display;
                             let visible = display.is_visible().unwrap();
                             if visible {
                                 println!("Hiding display");

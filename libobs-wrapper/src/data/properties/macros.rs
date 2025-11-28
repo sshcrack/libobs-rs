@@ -1,14 +1,9 @@
 macro_rules! assert_type {
     ($prop_type: ident, $name: ident) => {{
         use crate::data::properties::ObsPropertyType;
-        use num_traits::FromPrimitive;
 
         let p_type = unsafe { libobs::obs_property_get_type($name) };
-
-        #[cfg(target_family = "windows")]
-        let p_type = ObsPropertyType::from_i32(p_type);
-        #[cfg(not(target_family = "windows"))]
-        let p_type = ObsPropertyType::from_u32(p_type);
+        let p_type = crate::macros::enum_from_number!(ObsPropertyType, p_type);
 
         if p_type.is_none_or(|e| !matches!(e, ObsPropertyType::$prop_type)) {
             panic!(
@@ -49,15 +44,9 @@ macro_rules! get_enum {
     ($pointer_name: ident, $name: ident, $enum_name: ident) => {
         paste::paste! {
             {
-                use num_traits::FromPrimitive;
                 let v = unsafe { libobs::[<obs_property_ $name>]($pointer_name) };
 
-                #[cfg(target_family="windows")]
-                let v = $enum_name::from_i32(v);
-
-                #[cfg(not(target_family="windows"))]
-                let v = $enum_name::from_u32(v);
-
+                let v = crate::macros::enum_from_number!($enum_name, v);
                 if v.is_none() {
                     panic!("Invalid {} type got none", stringify!($name));
                 }

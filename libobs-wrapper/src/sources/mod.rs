@@ -1,17 +1,23 @@
 mod builder;
 pub use builder::*;
 
-use libobs::{obs_scene_item, obs_source_t};
+use libobs::{obs_scene_item, obs_scene_t, obs_source_t};
 
 use crate::{
     data::{immutable::ImmutableObsData, ObsData},
-    impl_obs_drop, impl_signal_manager, run_with_obs,
+    impl_obs_drop, impl_signal_manager,
+    macros::impl_eq_of_ptr,
+    run_with_obs,
     runtime::ObsRuntime,
-    unsafe_send::Sendable,
+    unsafe_send::{Sendable, SendableComp},
     utils::{traits::ObsUpdatable, ObsError, ObsString},
 };
 
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    sync::{Arc, RwLock},
+};
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -24,12 +30,16 @@ pub struct ObsSourceRef {
     pub(crate) name: ObsString,
     pub(crate) settings: Arc<ImmutableObsData>,
     pub(crate) hotkey_data: Arc<ImmutableObsData>,
-    pub(crate) scene_item: Option<Sendable<*mut obs_scene_item>>,
 
+    /// This is a map to all attached scene items of this source.
+    /// If the corresponding scene gets dropped, the scene will remove itself from the map and drop the scene item as well.
+    pub(crate) scene_items:
+        Arc<RwLock<HashMap<SendableComp<*mut obs_scene_t>, Sendable<*mut obs_scene_item>>>>,
     _guard: Arc<_ObsSourceGuard>,
     pub(crate) runtime: ObsRuntime,
 }
 
+impl_eq_of_ptr!(ObsSourceRef, source);
 impl ObsSourceRef {
     pub fn new<T: Into<ObsString> + Sync + Send, K: Into<ObsString> + Sync + Send>(
         id: T,
@@ -84,7 +94,7 @@ impl ObsSourceRef {
                 source,
                 runtime: runtime.clone(),
             }),
-            scene_item: None,
+            scene_items: Arc::new(RwLock::new(HashMap::new())),
             runtime,
             signal_manager: Arc::new(signals),
         })
