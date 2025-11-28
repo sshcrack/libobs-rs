@@ -1,12 +1,11 @@
 [package]
 name = "libobs-window-helper"
-version = "0.1.7"
+version = "0.2.0"
 description = "Provides a list of windows that can be captured by OBS"
 edition = "2021"
 readme = "README.md"
 keywords = ["obs", "libobs", "window", "helper", "window-list"]
 repository = "https://github.com/joshprk/obs-window-helper"
-documentation = "https://joshprk.github.io/libobs-rs/libobs_window_helper/"
 license = "GPL-3.0"
 
 [dependencies]
@@ -28,6 +27,9 @@ specta = ["dep:specta"]
 
 [dev-dependencies]
 serde_json = "1.0.140"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-pc-windows-msvc"]
 
 
 [lints]

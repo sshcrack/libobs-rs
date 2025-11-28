@@ -41,3 +41,6 @@ fern = { version = "0.7.1", features = ["colored"], optional = true }
 [features]
 default = ["cli"]
 cli = ["clap", "colored", "fern", "indicatif"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-pc-windows-msvc"]

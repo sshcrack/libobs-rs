@@ -1,9 +1,8 @@
 [package]
 name = "libobs-simple"
 description = "A simple and easy-to-use Rust wrapper around libobs-wrapper for recording and streaming."
-version = "3.3.0+32.0.2"
+version = "4.0.0+32.0.2"
 repository = "https://github.com/libobs-rs/libobs-rs"
-documentation = "https://joshprk.github.io/libobs-rs/libobs_simple/"
 readme = "README.md"
 authors = ["sshcrack"]
 categories = [
@@ -46,6 +45,8 @@ libobs-wrapper = { workspace = true, features = ["__test_environment"] }
 winit = "0.30.12"
 tokio = { version = "1", features = ["rt", "macros"] }
 
+[package.metadata.docs.rs]
+targets = ["x86_64-pc-windows-msvc"]
 
 [lints]
 workspace = true

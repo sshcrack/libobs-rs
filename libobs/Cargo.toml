@@ -1,9 +1,8 @@
 [package]
 name = "libobs"
-version = "3.0.1+32.0.2"
+version = "4.0.0+32.0.2"
 description = "LibOBS bindings for Rust"
 repository = "https://github.com/joshprk/libobs-rs"
-documentation = "https://joshprk.github.io/libobs-rs/libobs/"
 readme = "./README.md"
 authors = ["Joshua Park <joshprk@proton.me>", "Hendrik Lind <hendrik@sshcrack.me>"]
 categories = [
@@ -34,6 +33,9 @@ include_win_bindings = ["generate_bindings"]
 
 [dev-dependencies]
 vsprintf = "2.0.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-pc-windows-msvc"]
 
 [lints]
 workspace = true
