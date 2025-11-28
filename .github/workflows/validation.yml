@@ -91,11 +91,11 @@ jobs:
           crate: cargo-hack
       - name: Install OBS build dependencies (Windows)
         if: matrix.os != 'ubuntu-latest'
-        run: cargo obs-build --out-dir target/debug/deps
+        run: cargo obs-build build --out-dir target/debug/deps
 
       - name: Install OBS build dependencies (Windows - nextest)
         if: matrix.os != 'ubuntu-latest'
-        run: cargo obs-build --out-dir target/nextest-all-features/debug/deps
+        run: cargo obs-build build --out-dir target/nextest-all-features/debug/deps
 
       - name: Set up virtual display for Linux
         if: matrix.os == 'ubuntu-latest'
