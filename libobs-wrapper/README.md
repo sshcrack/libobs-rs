@@ -1,7 +1,6 @@
 # libobs-wrapper
 
 [![Crates.io](https://img.shields.io/crates/v/libobs-wrapper.svg)](https://crates.io/crates/libobs-wrapper)
-[![Documentation](https://docs.rs/libobs-wrapper/badge.svg)](https://docs.rs/libobs-wrapper)
 
 A safe, ergonomic Rust wrapper around the OBS (Open Broadcaster Software) Studio library. This crate provides a high-level interface for recording and streaming functionality using OBS's powerful capabilities, without having to deal with unsafe C/C++ code directly.
 
