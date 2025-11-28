@@ -1,4 +1,5 @@
 use crate::define_object_manager;
+use anyhow::bail;
 
 use super::{ObsWindowCaptureMethod, ObsWindowPriority};
 #[cfg(feature = "window-list")]
@@ -90,11 +91,11 @@ impl WindowCaptureSource {
         self.set_window_raw(window.0.obs_id.as_str())
     }
 
-    pub fn set_capture_audio(mut self, capture_audio: bool) -> anyhow::Result<Self, String> {
+    pub fn set_capture_audio(mut self, capture_audio: bool) -> anyhow::Result<Self> {
         use crate::sources::windows::audio_capture_available;
 
         if capture_audio && !audio_capture_available() {
-            return Err("Game Audio Capture is not available on this system".to_string());
+            bail!("Game Audio Capture is not available on this system");
         }
 
         self.get_settings_updater()
