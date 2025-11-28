@@ -28,13 +28,13 @@ jobs:
           path: libobs-rs
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@nightly
 
       - uses: Swatinem/rust-cache@v2
 
       - name: Build Documentation
         working-directory: libobs-rs
-        run: cargo doc --no-deps --workspace --lib --features "__test_environment"
+        run: cargo +nightly doc --no-deps --workspace --lib --features "__test_environment"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
