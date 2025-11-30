@@ -7,6 +7,7 @@ fn main() {
 fn main() {
     use std::path::PathBuf;
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
     let dll = include_bytes!("./assets/obs-dummy.dll");
 
     // Cargo target directory (one level up from OUT_DIR)
@@ -17,7 +18,5 @@ fn main() {
         .unwrap();
 
     let obs_dll_file = target_dir.join("obs.dll");
-    if !obs_dll_file.exists() {
-        std::fs::write(obs_dll_file, dll).unwrap();
-    }
+    std::fs::write(obs_dll_file, dll).unwrap();
 }
