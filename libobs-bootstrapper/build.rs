@@ -7,6 +7,7 @@ fn main() {
 fn main() {
     use std::path::PathBuf;
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=./assets/obs-dummy.dll");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
     let dll = include_bytes!("./assets/obs-dummy.dll");
 
