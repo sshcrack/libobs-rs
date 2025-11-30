@@ -162,7 +162,9 @@ impl ObsContext {
     ///
     /// If initialization fails, an `ObsError` is returned.
     pub fn new(info: StartupInfo) -> Result<ObsContext, ObsError> {
-        if unsafe { libobs::obs_get_version() } == 0 {
+        log::trace!("Getting version number...");
+        let version_numb = unsafe { libobs::obs_get_version() };
+        if version_numb == 0 {
             return Err(ObsError::InvalidDll);
         }
 

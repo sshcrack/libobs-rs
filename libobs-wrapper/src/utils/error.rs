@@ -7,7 +7,7 @@ use crate::enums::ObsResetVideoStatus;
 pub enum ObsError {
     /// The `obs_startup` function failed on libobs.
     Failure,
-    /// This error is emitted if a dummy DLL was loaded instead of the real libobs DLL. Make sure you initialzie properly with libobs-bootstrapper
+    /// This error is emitted if a dummy DLL was loaded instead of the real libobs DLL. Make sure you bootstrap properly with libobs-bootstrapper
     InvalidDll,
     /// Failed to lock mutex describing whether there is a
     /// thread using libobs or not. Report to crate maintainer.
@@ -107,7 +107,7 @@ impl Display for ObsError {
             ObsError::SignalDataError(e) => write!(f, "Signal data error: {}", e),
             ObsError::EnumConversionError(e) => write!(f, "Enum conversion error: {}", e),
             ObsError::RuntimeChannelError(e) => write!(f, "Runtime channel error: {}", e),
-            ObsError::InvalidDll => write!(f, "A dummy DLL was loaded instead of the real libobs DLL. Make sure you initialize properly with libobs-bootstrapper"),
+            ObsError::InvalidDll => write!(f, "A dummy DLL was loaded instead of the real libobs DLL. Make sure you bootstrap properly with libobs-bootstrapper"),
         }
     }
 }

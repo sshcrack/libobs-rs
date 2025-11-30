@@ -143,13 +143,23 @@ jobs:
       # Check if formatting is correct
       - name: Check Rust formatting
         run: cargo fmt -- --check
+        env:
+          TOP_SECRET_NO_DUMMY_DLL: true
 
       - name: Check Rust with Clippy
         run: cargo clippy -- -D warnings
+        env:
+          TOP_SECRET_NO_DUMMY_DLL: true
       # Run cargo check to ensure code will compile
       - name: Check code compilation
         run: cargo hack check --feature-powerset --skip generate_bindings,include_win_bindings,__test_environment
+        env:
+          TOP_SECRET_NO_DUMMY_DLL: true
       - name: Run tests (no default features)
         run: cargo nextest r --profile ci --no-default-features --features "__test_environment"
+        env:
+          TOP_SECRET_NO_DUMMY_DLL: true
       - name: Run tests (with default features)
         run: cargo nextest r --profile ci --all-features --target-dir target/nextest-all-features
+        env:
+          TOP_SECRET_NO_DUMMY_DLL: true

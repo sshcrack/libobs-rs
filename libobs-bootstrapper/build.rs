@@ -9,6 +9,11 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=./assets/obs-dummy.dll");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
+
+    if std::env::var("TOP_SECRET_NO_DUMMY_DLL").is_ok() {
+        return;
+    }
+
     let dll = include_bytes!("./assets/obs-dummy.dll");
 
     // Cargo target directory (one level up from OUT_DIR)
