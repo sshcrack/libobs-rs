@@ -5,7 +5,7 @@ use libobs::{LIBOBS_API_MAJOR_VER, LIBOBS_API_MINOR_VER, LIBOBS_API_PATCH_VER};
 
 use crate::error::ObsBootstrapError;
 
-pub type GetVersionFunc = unsafe extern "C" fn() -> *const std::os::raw::c_char;
+pub type GetVersionFunc = unsafe extern "C" fn() -> u32;
 
 pub fn get_installed_version(obs_dll: &Path) -> Result<Option<String>, ObsBootstrapError> {
     // The obs.dll should always exist
@@ -20,38 +20,26 @@ pub fn get_installed_version(obs_dll: &Path) -> Result<Option<String>, ObsBootst
         let lib = Library::new(obs_dll)
             .map_err(|e| ObsBootstrapError::LibLoadingError("Opening library", e))?;
         let get_version: libloading::Symbol<GetVersionFunc> = lib
-            .get(b"obs_get_version_string")
+            .get(b"obs_get_version")
             .map_err(|e| ObsBootstrapError::LibLoadingError("Getting version string", e))?;
         let version = get_version();
 
-        if version.is_null() {
+        if version == 0 {
             lib.close()
                 .map_err(|e| ObsBootstrapError::LibLoadingError("Closing lib", e))?;
             log::trace!("obs.dll does not have a version string");
             return Ok(None);
         }
 
-        let version_str = std::ffi::CStr::from_ptr(version).to_str();
-        if version_str.is_err() {
-            lib.close()
-                .map_err(|e| ObsBootstrapError::LibLoadingError("Closing lib", e))?;
-            log::trace!(
-                "obs.dll version string is not valid UTF-8: {}",
-                version_str.err().unwrap()
-            );
-            return Ok(None);
-        }
-
         lib.close()
             .map_err(|e| ObsBootstrapError::LibLoadingError("Closing lib", e))?;
 
-        let version_str = version_str
-            .map_err(|e| ObsBootstrapError::VersionError(e.to_string()))?
-            .to_string();
-        if version_str.is_empty() {
-            log::trace!("obs.dll version string is empty");
-            return Ok(None);
-        }
+        let version_str = format!(
+            "{}.{}.{}",
+            (version >> 24) & 0xFF,
+            (version >> 16) & 0xFF,
+            version & 0xFFFF
+        );
 
         Ok(Some(version_str))
     }
