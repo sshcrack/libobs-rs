@@ -18,7 +18,7 @@ libobs-wrapper = { path = "./libobs-wrapper", version = "6.0.3", default-feature
 libobs-simple-macro = { path = "./libobs-simple-macro", version = "6.0.1" }
 libobs-simple = { path = "./libobs-simple", version = "5.0.5+32.0.2" }
 libobs-window-helper = { path = "./libobs-window-helper", version = "0.2.1" }
-libobs-bootstrapper = { path = "./libobs-bootstrapper", version = "0.2.3" }
+libobs-bootstrapper = { path = "./libobs-bootstrapper", version = "0.2.4" }
 
 
 [workspace.lints.rust]
