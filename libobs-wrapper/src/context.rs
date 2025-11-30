@@ -162,8 +162,8 @@ impl ObsContext {
     ///
     /// If initialization fails, an `ObsError` is returned.
     pub fn new(info: StartupInfo) -> Result<ObsContext, ObsError> {
-        if unsafe {libobs::obs_get_version() } == 0 {
-            return Err(ObsError::InvalidDll)
+        if unsafe { libobs::obs_get_version() } == 0 {
+            return Err(ObsError::InvalidDll);
         }
 
         // Spawning runtime, I'll keep this as function for now
