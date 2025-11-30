@@ -19,7 +19,7 @@ pub enum DownloadStatus {
 }
 
 pub(crate) async fn download_obs(
-    repo: &str,
+    _repo: &str,
 ) -> Result<impl Stream<Item = DownloadStatus>, ObsBootstrapError> {
     // Fetch latest OBS release
     let client = reqwest::ClientBuilder::new()
@@ -27,7 +27,9 @@ pub(crate) async fn download_obs(
         .build()
         .map_err(|e| ObsBootstrapError::DownloadError("Building the reqwest client", e))?;
 
-    let releases_url = format!("https://api.github.com/repos/{}/releases", repo);
+    #[cfg(not(feature = "__mock_github_responses"))]
+    let releases_url = format!("https://api.github.com/repos/{}/releases", _repo);
+    #[cfg(not(feature = "__mock_github_responses"))]
     let releases: github_types::Root = client
         .get(&releases_url)
         .send()
@@ -36,6 +38,15 @@ pub(crate) async fn download_obs(
         .json()
         .await
         .map_err(|e| ObsBootstrapError::DownloadError("Converting Github API requet to JSON", e))?;
+
+    #[cfg(feature = "__mock_github_responses")]
+    let releases: github_types::Root = {
+        println!("-- WARNING --");
+        println!("Using mock GitHub responses! This is only for testing purposes.");
+        println!("-- WARNING --");
+        serde_json::from_str(include_str!("../mock_responses/libobs_builds_release.json"))
+            .expect("Parsing mock response")
+    };
 
     let mut possible_versions = vec![];
     for release in releases {
