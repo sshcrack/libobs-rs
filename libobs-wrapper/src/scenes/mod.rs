@@ -196,23 +196,25 @@ impl ObsSceneRef {
 
     /// Removes the given source from this scene. Removes the corresponding scene item as well. It may be possible that this source is still added to another scene.
     pub fn remove_source(&mut self, source: &ObsSourceRef) -> Result<(), ObsError> {
-        let scene_items = source
-            .scene_items
-            .read()
-            .map_err(|e| ObsError::LockError(format!("{:?}", e)))?;
-
         let sendable_comp = SendableComp(self.scene.0);
-        let scene_item_ptr = scene_items
-            .get(&sendable_comp)
-            .ok_or(ObsError::SourceNotFound)?
-            .clone();
+        {
+            let scene_items = source
+                .scene_items
+                .read()
+                .map_err(|e| ObsError::LockError(format!("{:?}", e)))?;
 
-        run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
-            // Remove the scene item
-            libobs::obs_sceneitem_remove(scene_item_ptr);
-            // Release the scene item reference
-            libobs::obs_sceneitem_release(scene_item_ptr);
-        })?;
+            let scene_item_ptr = scene_items
+                .get(&sendable_comp)
+                .ok_or(ObsError::SourceNotFound)?
+                .clone();
+
+            run_with_obs!(self.runtime, (scene_item_ptr), move || unsafe {
+                // Remove the scene item
+                libobs::obs_sceneitem_remove(scene_item_ptr);
+                // Release the scene item reference
+                libobs::obs_sceneitem_release(scene_item_ptr);
+            })?;
+        }
 
         // We need to make sure to remove references from both the scene and the source
         self.sources
