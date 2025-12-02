@@ -15,7 +15,6 @@ use libobs_wrapper::utils::traits::ObsUpdatable;
 
 #[cfg(target_os = "linux")]
 use libobs_simple::sources::linux::LinuxGeneralScreenCapture;
-use std::io::Write;
 #[cfg(target_os = "linux")]
 use std::io::{self, Write};
 
@@ -29,20 +28,14 @@ impl ObsLogger for NoLogger {
 
 fn main() -> anyhow::Result<()> {
     // Start the OBS context
-    println!("Startupinfo");
-    std::io::stdout().flush()?;
     let startup_info = StartupInfo::default();
 
     // FIXME This is not recommended in production. This is just for the purpose of this example.
     #[cfg(target_os = "linux")]
     let startup_info = startup_info.set_logger(Box::new(NoLogger {}));
 
-    println!("Startupinfo");
-    std::io::stdout().flush()?;
     let mut context = ObsContext::new(startup_info)?;
 
-    println!("Startupinfo");
-    std::io::stdout().flush()?;
     let mut scene = context.scene("main")?;
 
     // Platform-specific screen/monitor capture setup
