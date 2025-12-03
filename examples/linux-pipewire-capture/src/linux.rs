@@ -1,15 +1,18 @@
+use libobs_simple::output::simple::ObsContextSimpleExt;
 use libobs_simple::sources::linux::{PipeWireScreenCaptureSourceBuilder, PipeWireSourceExtTrait};
-use libobs_wrapper::context::ObsContext;
-use libobs_wrapper::encoders::ObsContextEncoders;
-use libobs_wrapper::logger::ObsLogger;
-use libobs_wrapper::sources::ObsSourceBuilder;
-use libobs_wrapper::utils::{AudioEncoderInfo, ObsPath, OutputInfo, StartupInfo};
+use libobs_simple::wrapper::{
+    enums::ObsLogLevel,
+    context::ObsContext,
+    logger::ObsLogger,
+    sources::ObsSourceBuilder,
+    utils::{ObsPath, StartupInfo},
+};
 use std::fs;
 
 #[derive(Debug)]
 pub struct NoLogger {}
 impl ObsLogger for NoLogger {
-    fn log(&mut self, _level: libobs_wrapper::enums::ObsLogLevel, _msg: String) {}
+    fn log(&mut self, _level: ObsLogLevel, _msg: String) {}
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -45,37 +48,9 @@ pub fn main() -> anyhow::Result<()> {
     // Register the source
     scene.set_to_channel(0)?;
 
-    // Set up output to ./linux-window-recording.mp4
-    let mut output_settings = context.data()?;
-    let obs_path = ObsPath::from_relative("linux-window-recording.mp4").build();
-    output_settings.set_string("path", obs_path.clone())?;
-
-    let output_info = OutputInfo::new("ffmpeg_muxer", "output", Some(output_settings), None);
-    let mut output = context.output(output_info)?;
-
-    // Register the video encoder
-    let mut video_settings = context.data()?;
-    video_settings
-        .bulk_update()
-        .set_int("bf", 2)
-        .set_bool("psycho_aq", true)
-        .set_bool("lookahead", true)
-        .set_string("profile", "high")
-        .set_string("preset", "hq")
-        .set_string("rate_control", "cbr")
-        .set_int("bitrate", 8000) // Lower bitrate for window capture
-        .update()?;
-
-    let mut video_encoder = context.best_video_encoder()?;
-    video_encoder.set_settings(video_settings);
-    video_encoder.set_to_output(&mut output, "video_encoder")?;
-
-    // Register the audio encoder
-    let mut audio_settings = context.data()?;
-    audio_settings.set_int("bitrate", 160)?;
-    let audio_info =
-        AudioEncoderInfo::new("ffmpeg_aac", "audio_encoder", Some(audio_settings), None);
-    output.create_and_set_audio_encoder(audio_info, 0)?;
+    let obs_path = ObsPath::from_relative("linux-window-recording.mp4");
+    let mut output = context.simple_output_builder("window-capture", obs_path.clone())
+        .build()?;
 
     // Start recording
     output.start()?;
@@ -89,7 +64,7 @@ pub fn main() -> anyhow::Result<()> {
     println!("Stopping recording...");
     // Stop recording
     output.stop()?;
-    println!("Recording stopped. Output saved to {}", obs_path);
+    println!("Recording stopped. Output saved to {:?}", obs_path);
     let restore_token = window_capture.get_restore_token()?;
     println!("Restore Token: {:?}. You can use this when creating a source so the exact same window is captured again", restore_token);
 
