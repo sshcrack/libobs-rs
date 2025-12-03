@@ -1,8 +1,8 @@
 use libobs_simple::output::simple::ObsContextSimpleExt;
 use libobs_simple::sources::linux::{PipeWireScreenCaptureSourceBuilder, PipeWireSourceExtTrait};
 use libobs_simple::wrapper::{
-    enums::ObsLogLevel,
     context::ObsContext,
+    enums::ObsLogLevel,
     logger::ObsLogger,
     sources::ObsSourceBuilder,
     utils::{ObsPath, StartupInfo},
@@ -49,7 +49,8 @@ pub fn main() -> anyhow::Result<()> {
     scene.set_to_channel(0)?;
 
     let obs_path = ObsPath::from_relative("linux-window-recording.mp4");
-    let mut output = context.simple_output_builder("window-capture", obs_path.clone())
+    let mut output = context
+        .simple_output_builder("window-capture", obs_path.clone())
         .build()?;
 
     // Start recording
