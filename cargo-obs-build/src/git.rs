@@ -101,8 +101,8 @@ pub fn fetch_release(
     cache_dir: &Path,
 ) -> anyhow::Result<ReleaseInfo> {
     let tag_str = tag.clone();
-    let tag_param = if let Some(tag) = tag_str {
-        &format!("tags/{}", tag_str.unwrap())
+    let tag_param = if let Some(tag_inner) = tag_str {
+        &format!("tags/{}", tag_inner)
     } else {
         "latest"
     };
