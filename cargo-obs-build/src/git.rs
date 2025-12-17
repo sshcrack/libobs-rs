@@ -101,10 +101,10 @@ pub fn fetch_release(
     cache_dir: &Path,
 ) -> anyhow::Result<ReleaseInfo> {
     let tag_str = tag.clone();
-    let tag_param = if tag_str.is_none() {
-        "latest"
+    let tag_param = if let Some(tag_inner) = tag_str {
+        &format!("tags/{}", tag_inner)
     } else {
-        &format!("tags/{}", tag_str.unwrap())
+        "latest"
     };
 
     // Create cache key based on repo and tag
