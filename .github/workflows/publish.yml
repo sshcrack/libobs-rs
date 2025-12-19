@@ -1,245 +1,81 @@
 name: Publish Crates
 
 on:
-    push:
-        tags:
-          - 'libobs-v*'
-          - 'libobs-simple-v*'
-          - 'libobs-wrapper-v*'
-          - 'libobs-bootstrapper-v*'
-          - 'libobs-window-helper-v*'
-          - 'libobs-simple-macro-v*'
-          - 'cargo-obs-build-v*'
+  workflow_run:
+    workflows: ["Validation"]
+    types:
+      - completed
+
 jobs:
-  build-test:
-    name: Build and Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest]
+  publish:
+    name: Publish tagged crates
+    runs-on: ubuntu-latest
+    environment: cargo-publish
+    if: github.event.workflow_run.conclusion == 'success'
+
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2
-      - name: Cache cargo-obs-build Installation
-        uses: actions/cache@v4
-        if: matrix.os != 'ubuntu-latest'
-        id: cargo-obs-cache
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          path: |
-            obs-build
-          key: ${{ runner.os }}-cargo-obs-build-${{ hashFiles('Cargo.toml') }}-v2
-      - name: Cache OBS Studio Installation
-        uses: actions/cache@v4
-        if: matrix.os == 'ubuntu-latest'
-        id: obs-cache
-        with:
-          path: |
-            ${{ github.workspace }}/obs-install
-          key: ${{ runner.os }}-obs-studio-${{ hashFiles('.github/workflows/validation.yml') }}-v3
-          restore-keys: |
-            ${{ runner.os }}-obs-studio-
+          fetch-depth: 0
 
-      - uses: taiki-e/install-action@nextest
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      - uses: awalsh128/cache-apt-pkgs-action@latest
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          packages: cmake extra-cmake-modules ninja-build pkg-config clang clang-format build-essential curl ccache git zsh libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev libx264-dev libcurl4-openssl-dev libmbedtls-dev libgl1-mesa-dev libjansson-dev libluajit-5.1-dev python3-dev libx11-dev libxcb-randr0-dev libxcb-shm0-dev libxcb-xinerama0-dev libxcb-composite0-dev libxcomposite-dev libxinerama-dev libxcb1-dev libx11-xcb-dev libxcb-xfixes0-dev swig libcmocka-dev libxss-dev libglvnd-dev libgles2-mesa-dev libwayland-dev librist-dev libsrt-openssl-dev libpci-dev libpipewire-0.3-dev libqrcodegencpp-dev uthash-dev libsimde-dev qt6-base-dev qt6-base-private-dev qt6-svg-dev qt6-wayland qt6-image-formats-plugins libasound2-dev libfdk-aac-dev libfontconfig-dev libfreetype6-dev libjack-jackd2-dev libpulse-dev libsndio-dev libspeexdsp-dev libudev-dev libv4l-dev libva-dev libvlc-dev libvpl-dev libdrm-dev nlohmann-json3-dev libwebsocketpp-dev libasio-dev libffmpeg-nvenc-dev xvfb ffmpeg libblas-dev libblas3 liblapack3
-          version: 1.0
-      - name: Symlink libraries
-        if: matrix.os == 'ubuntu-latest'
+      - name: Ensure token is present
         run: |
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/blas/libblas.so.3 /usr/lib/x86_64-linux-gnu/libblas.so.3
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3 /usr/lib/x86_64-linux-gnu/liblapack.so.3
-
-      - name: Build and Install OBS Studio from Source
-        if: matrix.os == 'ubuntu-latest' && steps.obs-cache.outputs.cache-hit != 'true'
-        run: |
-          # Clone OBS Studio repository
-          git clone --recursive https://github.com/obsproject/obs-studio.git /tmp/obs-studio
-          cd /tmp/obs-studio
-
-          # Get the latest stable tag
-          git fetch --tags
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          echo "Building OBS Studio version: $LATEST_TAG"
-          git checkout $LATEST_TAG
-          git submodule update --init --recursive
-
-          # Configure build with CMAKE_INSTALL_PREFIX to workspace directory
-          cmake --preset ubuntu \
-            -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/obs-install \
-            -DENABLE_BROWSER=OFF
-
-          # Build OBS Studio
-          cmake --build build_ubuntu --parallel $(nproc)
-
-          # Install OBS Studio to local directory
-          cmake --install build_ubuntu
-
-      - name: Install cargo-obs-build from crates.io
-        uses: baptiste0928/cargo-install@v3
-        if: matrix.os != 'ubuntu-latest'
-        with:
-          crate: cargo-obs-build
-
-      - name: Install cargo-hack from crates.io
-        uses: baptiste0928/cargo-install@v3
-        with:
-          crate: cargo-hack
-      - name: Install OBS build dependencies (Windows)
-        if: matrix.os != 'ubuntu-latest'
-        run: cargo obs-build build --out-dir target/debug/deps
-
-      - name: Install OBS build dependencies (Windows - nextest)
-        if: matrix.os != 'ubuntu-latest'
-        run: cargo obs-build build --out-dir target/nextest-all-features/debug/deps
-
-      - name: Set up virtual display for Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          # Start virtual display
-          export DISPLAY=:99
-          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-
-          # Wait for Xvfb to start
-          sleep 3
-
-          # Set display environment variable for subsequent steps
-          echo "DISPLAY=:99" >> $GITHUB_ENV
-
-      - name: Set up OBS environment for Linux
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          # Export environment variables for this session and save for future steps
-          export PKG_CONFIG_PATH="${{ github.workspace }}/obs-install/lib/pkgconfig:${{ github.workspace }}/obs-install/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH"
-          export LD_LIBRARY_PATH="${{ github.workspace }}/obs-install/lib:${{ github.workspace }}/obs-install/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
-
-          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> $GITHUB_ENV
-
-          # Set RUSTFLAGS to include library search paths
-          echo "RUSTFLAGS=-L ${{ github.workspace }}/obs-install/lib -L ${{ github.workspace }}/obs-install/lib/x86_64-linux-gnu" >> $GITHUB_ENV
-
-          # Verify OBS installation
-          echo "=== OBS Installation Verification ==="
-          if [ -f "${{ github.workspace }}/obs-install/lib/pkgconfig/libobs.pc" ] || [ -f "${{ github.workspace }}/obs-install/lib/x86_64-linux-gnu/pkgconfig/libobs.pc" ]; then
-            echo "✓ OBS Studio pkg-config file found"
-            if pkg-config --exists libobs; then
-              echo "✓ libobs pkg-config validation passed"
-              echo "✓ libobs version: $(pkg-config --modversion libobs)"
-              echo "✓ libobs cflags: $(pkg-config --cflags libobs)"
-              echo "✓ libobs libs: $(pkg-config --libs libobs)"
-            else
-              echo "✗ libobs pkg-config validation failed"
-              exit 1
-            fi
-          else
-            echo "✗ libobs.pc not found in expected locations"
-            echo "Searching for libobs.pc..."
-            find ${{ github.workspace }}/obs-install -name "libobs.pc" 2>/dev/null || echo "libobs.pc not found in obs-install"
-            echo "Available .pc files:"
-            find ${{ github.workspace }}/obs-install -name "*.pc" -path "*/pkgconfig/*" | grep -i obs || echo "No OBS-related .pc files found"
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
             exit 1
           fi
-          echo "======================================"
 
-      # Check if formatting is correct
-      - name: Check Rust formatting
-        run: cargo fmt -- --check
-        env:
-          TOP_SECRET_NO_DUMMY_DLL: true
+      - name: Find crate release tags
+        id: tags
+        run: |
+          COMMIT="${{ github.event.workflow_run.head_sha }}"
 
-      - name: Check Rust with Clippy
-        run: cargo clippy -- -D warnings
-        env:
-          TOP_SECRET_NO_DUMMY_DLL: true
-      # Run cargo check to ensure code will compile
-      - name: Check code compilation
-        run: cargo hack check --feature-powerset --skip generate_bindings,include_win_bindings,__test_environment
-        env:
-          TOP_SECRET_NO_DUMMY_DLL: true
-      - name: Run tests (no default features)
-        run: cargo nextest r --profile ci --no-default-features --features "__test_environment"
-        env:
-          TOP_SECRET_NO_DUMMY_DLL: true
-      - name: Run tests (with default features)
-        run: cargo nextest r --profile ci --all-features --target-dir target/nextest-all-features
-        env:
-          TOP_SECRET_NO_DUMMY_DLL: true
-  publish-job:
-      name: Publish ${{ matrix.crate }}
-      needs: build-test
-      environment: cargo-publish
-      runs-on: ubuntu-latest
-      strategy:
-          matrix:
-              include:
-                  - crate: libobs
-                    path: libobs
-                    tag_prefix: libobs-v
-                  - crate: libobs-simple
-                    path: libobs-simple
-                    tag_prefix: libobs-simple-v
-                  - crate: libobs-wrapper
-                    path: libobs-wrapper
-                    tag_prefix: libobs-wrapper-v
-                  - crate: libobs-bootstrapper
-                    path: libobs-bootstrapper
-                    tag_prefix: libobs-bootstrapper-v
-                  - crate: libobs-window-helper
-                    path: libobs-window-helper
-                    tag_prefix: libobs-window-helper-v
-                  - crate: libobs-simple-macro
-                    path: libobs-simple-macro
-                    tag_prefix: libobs-simple-macro-v
-                  - crate: cargo-obs-build
-                    path: cargo-obs-build
-                    tag_prefix: cargo-obs-build-v
-      env:
-          TAG_NAME: ${{ github.ref_name }}
-      steps:
-          - name: Show tag info
-            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
-            run: |
-                echo "Triggering tag: $TAG_NAME"
+          TAGS=$(git tag --points-at "$COMMIT" | \
+            grep -E '.+-v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?' || true)
 
-          - name: Check out repository at tag
-            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
-            uses: actions/checkout@v4
-            with:
-                ref: ${{ github.ref_name }}
-                fetch-depth: 0
+          if [ -z "$TAGS" ]; then
+            exit 0
+          fi
 
-          - name: Install Rust
-            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
-            uses: dtolnay/rust-toolchain@stable
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
-          - name: Verify tag matches crate version
-            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
-            run: |
-                tag_prefix="${{ matrix.tag_prefix }}"
-                crate="${{ matrix.crate }}"
-                manifest="${{ matrix.path }}/Cargo.toml"
+      - name: Publish tagged crates
+        run: |
+          set -e
 
-                if [[ "$TAG_NAME" != ${tag_prefix}* ]]; then
-                  echo "Tag $TAG_NAME does not match prefix ${tag_prefix}, skipping." >&2
-                  exit 1
-                fi
+          for TAG in ${{ steps.tags.outputs.tags }}; do
+            CRATE_NAME="${TAG%-v*}"
+            TAG_VERSION="${TAG#*-v}"
 
-                tag_version=${TAG_NAME#${tag_prefix}}
+            if [ ! -d "$CRATE_NAME" ]; then
+              continue
+            fi
 
-                pkg_version=$(cargo metadata --no-deps --format-version 1 --manifest-path "$manifest" \
-                  | jq -r --arg name "$crate" '.packages[] | select(.name==$name) | .version' | head -n1)
-                if [[ "$pkg_version" != "$tag_version" ]]; then
-                  echo "Tag version $tag_version does not match crate version $pkg_version" >&2
-                  exit 1
-                fi
+            CARGO_TOML="$CRATE_NAME/Cargo.toml"
 
-          - name: Publish crate
-            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
-            run: |
-                cargo publish --manifest-path "${{ matrix.path }}/Cargo.toml" --allow-dirty
-            env:
-                CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+            if [ ! -f "$CARGO_TOML" ]; then
+              continue
+            fi
 
+            CRATE_VERSION=$(grep -m1 '^version\s*=' "$CARGO_TOML" \
+              | sed -E 's/.*"([^"]+)".*/\1/' \
+              | cut -d+ -f1)
+
+            if [ "$CRATE_VERSION" != "$(echo "$TAG_VERSION" | cut -d+ -f1)" ]; then
+              exit 1
+            fi
+
+            cargo publish \
+              --manifest-path "$CARGO_TOML" \
+              --locked
+          done
