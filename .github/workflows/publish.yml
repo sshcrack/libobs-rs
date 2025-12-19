@@ -8,8 +8,9 @@ on:
 jobs:
     publish:
         name: Publish ${{ matrix.crate }}
-        if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
+        if: ${{ github.event.workflow_run.conclusion == 'success' }}
         runs-on: ubuntu-latest
+        environment: cargo-publish
         strategy:
             matrix:
                 include:
@@ -38,19 +39,23 @@ jobs:
             TAG_NAME: ${{ github.event.workflow_run.head_branch }}
         steps:
             - name: Show tag info
+              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
               run: |
                   echo "Triggering tag: $TAG_NAME"
 
             - name: Check out repository at tag
+              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
               uses: actions/checkout@v4
               with:
                   ref: ${{ github.event.workflow_run.head_branch }}
                   fetch-depth: 0
 
             - name: Install Rust
+              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
               uses: dtolnay/rust-toolchain@stable
 
             - name: Verify tag matches crate version
+              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
               run: |
                   tag_prefix="${{ matrix.tag_prefix }}"
                   crate="${{ matrix.crate }}"
@@ -71,6 +76,7 @@ jobs:
                   fi
 
             - name: Publish crate
+              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
               run: |
                   cargo publish --manifest-path "${{ matrix.path }}/Cargo.toml" --allow-dirty
               env:
