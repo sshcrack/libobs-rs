@@ -2,6 +2,15 @@ name: Build and Deploy Documentation
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'libobs-v*'
+      - 'libobs-simple-v*'
+      - 'libobs-wrapper-v*'
+      - 'libobs-bootstrapper-v*'
+      - 'libobs-window-helper-v*'
+      - 'libobs-simple-macro-v*'
+      - 'cargo-obs-build-v*'
 
 permissions:
   contents: read
