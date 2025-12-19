@@ -167,79 +167,79 @@ jobs:
         run: cargo nextest r --profile ci --all-features --target-dir target/nextest-all-features
         env:
           TOP_SECRET_NO_DUMMY_DLL: true
-    publish:
-        name: Publish ${{ matrix.crate }}
-        needs: check-and-approve
-        environment: cargo-publish
-        runs-on: ubuntu-latest
-        strategy:
-            matrix:
-                include:
-                    - crate: libobs
-                      path: libobs
-                      tag_prefix: libobs-v
-                    - crate: libobs-simple
-                      path: libobs-simple
-                      tag_prefix: libobs-simple-v
-                    - crate: libobs-wrapper
-                      path: libobs-wrapper
-                      tag_prefix: libobs-wrapper-v
-                    - crate: libobs-bootstrapper
-                      path: libobs-bootstrapper
-                      tag_prefix: libobs-bootstrapper-v
-                    - crate: libobs-window-helper
-                      path: libobs-window-helper
-                      tag_prefix: libobs-window-helper-v
-                    - crate: libobs-simple-macro
-                      path: libobs-simple-macro
-                      tag_prefix: libobs-simple-macro-v
-                    - crate: cargo-obs-build
-                      path: cargo-obs-build
-                      tag_prefix: cargo-obs-build-v
-        env:
-            TAG_NAME: ${{ github.event.workflow_run.head_branch }}
-        steps:
-            - name: Show tag info
-              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
-              run: |
-                  echo "Triggering tag: $TAG_NAME"
+  publish:
+      name: Publish ${{ matrix.crate }}
+      needs: build-test
+      environment: cargo-publish
+      runs-on: ubuntu-latest
+      strategy:
+          matrix:
+              include:
+                  - crate: libobs
+                    path: libobs
+                    tag_prefix: libobs-v
+                  - crate: libobs-simple
+                    path: libobs-simple
+                    tag_prefix: libobs-simple-v
+                  - crate: libobs-wrapper
+                    path: libobs-wrapper
+                    tag_prefix: libobs-wrapper-v
+                  - crate: libobs-bootstrapper
+                    path: libobs-bootstrapper
+                    tag_prefix: libobs-bootstrapper-v
+                  - crate: libobs-window-helper
+                    path: libobs-window-helper
+                    tag_prefix: libobs-window-helper-v
+                  - crate: libobs-simple-macro
+                    path: libobs-simple-macro
+                    tag_prefix: libobs-simple-macro-v
+                  - crate: cargo-obs-build
+                    path: cargo-obs-build
+                    tag_prefix: cargo-obs-build-v
+      env:
+          TAG_NAME: ${{ github.ref_name }}
+      steps:
+          - name: Show tag info
+            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
+            run: |
+                echo "Triggering tag: $TAG_NAME"
 
-            - name: Check out repository at tag
-              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
-              uses: actions/checkout@v4
-              with:
-                  ref: ${{ github.event.workflow_run.head_branch }}
-                  fetch-depth: 0
+          - name: Check out repository at tag
+            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
+            uses: actions/checkout@v4
+            with:
+                ref: ${{ github.ref_name }}
+                fetch-depth: 0
 
-            - name: Install Rust
-              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
-              uses: dtolnay/rust-toolchain@stable
+          - name: Install Rust
+            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
+            uses: dtolnay/rust-toolchain@stable
 
-            - name: Verify tag matches crate version
-              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
-              run: |
-                  tag_prefix="${{ matrix.tag_prefix }}"
-                  crate="${{ matrix.crate }}"
-                  manifest="${{ matrix.path }}/Cargo.toml"
+          - name: Verify tag matches crate version
+            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
+            run: |
+                tag_prefix="${{ matrix.tag_prefix }}"
+                crate="${{ matrix.crate }}"
+                manifest="${{ matrix.path }}/Cargo.toml"
 
-                  if [[ "$TAG_NAME" != ${tag_prefix}* ]]; then
-                    echo "Tag $TAG_NAME does not match prefix ${tag_prefix}, skipping." >&2
-                    exit 1
-                  fi
+                if [[ "$TAG_NAME" != ${tag_prefix}* ]]; then
+                  echo "Tag $TAG_NAME does not match prefix ${tag_prefix}, skipping." >&2
+                  exit 1
+                fi
 
-                  tag_version=${TAG_NAME#${tag_prefix}}
+                tag_version=${TAG_NAME#${tag_prefix}}
 
-                  pkg_version=$(cargo metadata --no-deps --format-version 1 --manifest-path "$manifest" \
-                    | jq -r --arg name "$crate" '.packages[] | select(.name==$name) | .version' | head -n1)
-                  if [[ "$pkg_version" != "$tag_version" ]]; then
-                    echo "Tag version $tag_version does not match crate version $pkg_version" >&2
-                    exit 1
-                  fi
+                pkg_version=$(cargo metadata --no-deps --format-version 1 --manifest-path "$manifest" \
+                  | jq -r --arg name "$crate" '.packages[] | select(.name==$name) | .version' | head -n1)
+                if [[ "$pkg_version" != "$tag_version" ]]; then
+                  echo "Tag version $tag_version does not match crate version $pkg_version" >&2
+                  exit 1
+                fi
 
-            - name: Publish crate
-              if: ${{ startsWith(github.event.workflow_run.head_branch, matrix.tag_prefix) }}
-              run: |
-                  cargo publish --manifest-path "${{ matrix.path }}/Cargo.toml" --allow-dirty
-              env:
-                  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          - name: Publish crate
+            if: ${{ startsWith(github.ref_name, matrix.tag_prefix) }}
+            run: |
+                cargo publish --manifest-path "${{ matrix.path }}/Cargo.toml" --allow-dirty
+            env:
+                CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
