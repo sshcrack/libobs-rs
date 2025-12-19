@@ -1,9 +1,9 @@
 [package]
 name = "libobs-simple"
 description = "A simple and easy-to-use Rust wrapper around libobs-wrapper for recording and streaming."
-version = "6.0.0+32.0.2"
+version = "6.0.1+32.0.2"
 repository = "https://github.com/libobs-rs/libobs-rs"
-documentation = "https://libobs-rs.github.io/libobs-docs/libobs_simple/"
+documentation = "https://libobs-rs.github.io/libobs-rs/libobs_simple/"
 readme = "README.md"
 authors = ["Hendrik Lind <hendrik@sshcrack.me>"]
 categories = [

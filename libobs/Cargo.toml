@@ -1,9 +1,9 @@
 [package]
 name = "libobs"
-version = "4.0.2+32.0.2"
+version = "4.0.3+32.0.2"
 description = "LibOBS bindings for Rust"
 repository = "https://github.com/libobs-rs/libobs-rs"
-documentation = "https://libobs-rs.github.io/libobs-docs/libobs/"
+documentation = "https://libobs-rs.github.io/libobs-rs/libobs/"
 readme = "./README.md"
 authors = ["Joshua Park <joshprk@proton.me>", "Hendrik Lind <hendrik@sshcrack.me>"]
 categories = [

@@ -1,12 +1,12 @@
 [package]
 name = "libobs-window-helper"
-version = "0.3.0"
+version = "0.3.1"
 description = "Provides a list of windows that can be captured by OBS"
 edition = "2021"
 readme = "README.md"
 keywords = ["obs", "libobs", "window", "helper", "window-list"]
 repository = "https://github.com/libobs-rs/libobs-rs"
-documentation = "https://libobs-rs.github.io/libobs-docs/libobs_window_helper/"
+documentation = "https://libobs-rs.github.io/libobs-rs/libobs_window_helper/"
 authors = ["Hendrik Lind <hendrik@sshcrack.me>"]
 license = "GPL-3.0"
 

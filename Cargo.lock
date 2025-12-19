@@ -1836,7 +1836,7 @@ dependencies = [
 
 [[package]]
 name = "libobs"
-version = "4.0.2+32.0.2"
+version = "4.0.3+32.0.2"
 dependencies = [
  "bindgen",
  "pkg-config",
@@ -1845,7 +1845,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-bootstrapper"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "async-stream",
  "futures-core",
@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-simple"
-version = "6.0.0+32.0.2"
+version = "6.0.1+32.0.2"
 dependencies = [
  "anyhow",
  "display-info",
@@ -1888,7 +1888,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-simple-macro"
-version = "6.0.1"
+version = "6.0.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1897,7 +1897,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-window-helper"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1907,7 +1907,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-wrapper"
-version = "7.0.1+32.0.2"
+version = "7.0.2+32.0.2"
 dependencies = [
  "arboard",
  "chrono",
