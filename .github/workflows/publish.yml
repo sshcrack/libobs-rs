@@ -85,6 +85,6 @@ jobs:
 
             cargo publish \
               --manifest-path "$CARGO_TOML" \
-              --locked
+              --locked \
               --no-verify
           done
