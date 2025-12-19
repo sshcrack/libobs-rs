@@ -167,7 +167,7 @@ jobs:
         run: cargo nextest r --profile ci --all-features --target-dir target/nextest-all-features
         env:
           TOP_SECRET_NO_DUMMY_DLL: true
-  publish:
+  publish-job:
       name: Publish ${{ matrix.crate }}
       needs: build-test
       environment: cargo-publish
