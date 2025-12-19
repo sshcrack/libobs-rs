@@ -53,7 +53,15 @@ jobs:
         run: |
           set -e
 
-          for TAG in ${{ steps.tags.outputs.tags }}; do
+          TAGS="${{ steps.tags.outputs.tags }}"
+
+          if [ -z "$TAGS" ]; then
+            exit 0
+          fi
+
+          # Iterate tags line-by-line to avoid issues when the list contains
+          # newlines or is expanded across multiple lines by the runner.
+          printf '%s\n' "$TAGS" | while IFS= read -r TAG; do
             CRATE_NAME="${TAG%-v*}"
             TAG_VERSION="${TAG#*-v}"
 
