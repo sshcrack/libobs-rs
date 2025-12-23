@@ -1,0 +1,125 @@
+name: Publish Crates
+
+on:
+  workflow_run:
+    workflows: ["Validation"]
+    types:
+      - completed
+
+jobs:
+  check-release:
+    name: Check if release should happen
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      should-publish: ${{ steps.check.outputs.should-publish }}
+      tags: ${{ steps.check.outputs.tags }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit and find tags
+        id: check
+        run: |
+          COMMIT="${{ github.event.workflow_run.head_sha }}"
+
+          # Check if commit is on main branch
+          git branch -r --contains "$COMMIT" | grep -q "origin/main" || {
+            echo "Commit is not on main branch, skipping release"
+            echo "should-publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          # Find crate release tags
+          TAGS=$(git tag --points-at "$COMMIT" | \
+            grep -E '.+-v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?' || true)
+
+          if [ -z "$TAGS" ]; then
+            echo "No release tags found"
+            echo "should-publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Found release tags:"
+          echo "$TAGS"
+          echo "should-publish=true" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish tagged crates
+    runs-on: ubuntu-latest
+    needs: check-release
+    if: needs.check-release.outputs.should-publish == 'true'
+    environment: cargo-publish
+
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Ensure token is present
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "CARGO_REGISTRY_TOKEN is not set"
+            exit 1
+          fi
+
+      - name: Publish tagged crates
+        run: |
+          set -e
+
+          TAGS="${{ needs.check-release.outputs.tags }}"
+
+          if [ -z "$TAGS" ]; then
+            echo "No tags to publish"
+            exit 0
+          fi
+
+          # Iterate tags line-by-line to avoid issues when the list contains
+          # newlines or is expanded across multiple lines by the runner.
+          printf '%s\n' "$TAGS" | while IFS= read -r TAG; do
+            CRATE_NAME="${TAG%-v*}"
+            TAG_VERSION="${TAG#*-v}"
+
+            if [ ! -d "$CRATE_NAME" ]; then
+              echo "Directory $CRATE_NAME not found, skipping"
+              continue
+            fi
+
+            CARGO_TOML="$CRATE_NAME/Cargo.toml"
+
+            if [ ! -f "$CARGO_TOML" ]; then
+              echo "Cargo.toml not found at $CARGO_TOML, skipping"
+              continue
+            fi
+
+            CRATE_VERSION=$(grep -m1 '^version\s*=' "$CARGO_TOML" \
+              | sed -E 's/.*"([^"]+)".*/\1/' \
+              | cut -d+ -f1)
+
+            if [ "$CRATE_VERSION" != "$(echo "$TAG_VERSION" | cut -d+ -f1)" ]; then
+              echo "Version mismatch: $CRATE_VERSION != $TAG_VERSION"
+              exit 1
+            fi
+
+            echo "Publishing $CRATE_NAME version $CRATE_VERSION"
+            cargo publish \
+              --manifest-path "$CARGO_TOML" \
+              --locked \
+              --no-verify
+          done
