@@ -35,7 +35,6 @@ zip = { version = "7", default-features = false, features = ["deflate"] }
 
 # Transitive dependencies
 native-tls = "0.2.8"
-openssl = "0.10.45"
 
 # Binary-specific dependencies
 clap = { version = "4", features = ["derive"], optional = true }
@@ -49,3 +48,7 @@ __mock_github_responses = []
 
 [package.metadata.docs.rs]
 targets = ["x86_64-pc-windows-msvc"]
+
+[target.'cfg(target_os="linux")'.dependencies]
+# Transitive dependencies
+openssl = "0.10.45"
