@@ -372,7 +372,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-obs-build"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -1806,7 +1806,7 @@ dependencies = [
 
 [[package]]
 name = "libobs"
-version = "4.0.3+32.0.2"
+version = "4.0.4+32.0.2"
 dependencies = [
  "bindgen",
  "pkg-config",
@@ -1815,7 +1815,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-bootstrapper"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-stream",
  "futures-core",
@@ -1837,7 +1837,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-simple"
-version = "6.0.1+32.0.2"
+version = "6.0.2+32.0.2"
 dependencies = [
  "anyhow",
  "display-info",
@@ -1858,7 +1858,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-simple-macro"
-version = "6.0.2"
+version = "6.0.3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-window-helper"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -1877,7 +1877,7 @@ dependencies = [
 
 [[package]]
 name = "libobs-wrapper"
-version = "7.0.2+32.0.2"
+version = "7.0.3+32.0.2"
 dependencies = [
  "arboard",
  "cfg-if 1.0.4",
