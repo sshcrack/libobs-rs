@@ -168,6 +168,6 @@ jobs:
           TOP_SECRET_NO_DUMMY_DLL: true
 
       - name: Check minimal dependency version compatability
-        run: cargo minimal-versions check --workspace --ignore-private
+        run: cargo minimal-versions check --workspace --ignore-private --detach-path-deps=skip-exact
         env:
           TOP_SECRET_NO_DUMMY_DLL: true
