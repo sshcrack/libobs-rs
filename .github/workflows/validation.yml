@@ -166,30 +166,8 @@ jobs:
         run: cargo nextest r --profile ci --all-features --target-dir target/nextest-all-features
         env:
           TOP_SECRET_NO_DUMMY_DLL: true
-      
-      - name: Temporarily remove examples/* from workspace members
-        shell: python
-        run: |
-          from pathlib import Path
-          import re
-          p = Path('Cargo.toml')
-          content = p.read_text()
-          p.with_suffix('.toml.bak').write_text(content)
-          # Remove "examples/*" with optional comma and whitespace
-          content = re.sub(r'"examples/\*"\s*,\s*', '', content)
-          content = re.sub(r',\s*"examples/\*"', '', content)
-          p.write_text(content)
-      
-      - name: Run tests (with default features)
-        run: cargo minimal-versions check --all-features --workspace
+
+      - name: Check minimal dependency version compatability
+        run: cargo minimal-versions check --workspace --ignore-private
         env:
           TOP_SECRET_NO_DUMMY_DLL: true
-      
-      - name: Restore original Cargo.toml
-        if: always()
-        shell: python
-        run: |
-          from pathlib import Path
-          backup = Path('Cargo.toml.bak')
-          if backup.exists():
-              backup.rename('Cargo.toml')
