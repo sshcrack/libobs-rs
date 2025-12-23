@@ -19,24 +19,24 @@ path = "src/main.rs"
 
 [dependencies]
 # Core library dependencies
-anyhow = { version = "1.0.100", features = ["backtrace"] }
-cargo_metadata = { version = "0.23.0" }
-hex = "0.4.3"
-http_req = "0.14.1"
-indicatif = { version = "0.18.3", optional = true}
-log = "0.4.29"
-process_alive = "0.2.0"
-regex = { version = "1.12.2" }
-serde_json = "1.0.145"
-sha2 = "0.10.9"
-toml = "0.9.10"
-walkdir = "2.5.0"
-zip = { version = "7.0.0", default-features = false, features = ["deflate"] }
+anyhow = { workspace = true, features = ["backtrace"] }
+cargo_metadata = { version = "0.23" }
+hex = { workspace = true }
+http_req = "0.14"
+indicatif = { workspace = true, optional = true }
+log = { workspace = true }
+process_alive = "0.2"
+regex = { version = "1" }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+toml = "0.9"
+walkdir = "2"
+zip = { version = "7", default-features = false, features = ["deflate"] }
 
 # Binary-specific dependencies
-clap = { version = "4.5.51", features = ["derive"], optional = true }
-colored = { version = "3.0.0", optional = true }
-fern = { version = "0.7.1", features = ["colored"], optional = true }
+clap = { version = "4", features = ["derive"], optional = true }
+colored = { workspace = true, optional = true }
+fern = { version = "0.7", features = ["colored"], optional = true }
 
 [features]
 default = ["cli"]

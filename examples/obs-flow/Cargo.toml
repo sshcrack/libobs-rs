@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.86"
-env_logger = "0.11.5"
+anyhow = { workspace = true }
+env_logger = { workspace = true }
 libobs-wrapper = { workspace = true }
-libobs-simple = { path = "../../libobs-simple" }
+libobs-simple = { workspace = true }
