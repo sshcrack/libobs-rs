@@ -18,7 +18,7 @@ edition = "2021"
 build = "build.rs"
 
 [build-dependencies]
-bindgen = "0.72.1"
+bindgen = "0.72"
 pkg-config = "0.3"
 
 
@@ -28,7 +28,7 @@ generate_bindings = []
 include_win_bindings = ["generate_bindings"]
 
 [dev-dependencies]
-vsprintf = "2.0.0"
+vsprintf = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-pc-windows-msvc"]

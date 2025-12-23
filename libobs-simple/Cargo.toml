@@ -20,13 +20,13 @@ edition = "2021"
 libobs = { workspace = true }
 libobs-wrapper = { workspace = true }
 libobs-simple-macro = { workspace = true }
-num-derive = "0.4"
-num-traits = "0.2"
-log = "0.4"
+num-derive = { workspace = true }
+num-traits = { workspace = true }
+log = { workspace = true }
 
-display-info = "0.5"
+display-info = { workspace = true }
 libobs-window-helper = { workspace = true, optional = true }
-paste = "1"
+paste = { workspace = true }
 
 [features]
 default = ["window-list", "enable_runtime"]
@@ -36,13 +36,13 @@ enable_runtime = ["libobs-wrapper/enable_runtime"]
 __test_environment = ["libobs-wrapper/__test_environment"]
 
 [dev-dependencies]
-anyhow = "1"
-env_logger = "0.11"
-serde_json = "1"
+anyhow = { workspace = true }
+env_logger = { workspace = true }
+serde_json = { workspace = true }
 libobs-wrapper = { workspace = true, features = ["__test_environment"], default-features = false}
-winit = "0.30.12"
-tokio = { version = "1", features = ["rt", "macros"] }
-ffmpeg-sidecar = "2.2"
+winit = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros"] }
+ffmpeg-sidecar = "2"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-pc-windows-msvc"]

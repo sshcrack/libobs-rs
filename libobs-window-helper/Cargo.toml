@@ -11,22 +11,22 @@ authors = ["Hendrik Lind <hendrik@sshcrack.me>"]
 license = "GPL-3.0"
 
 [dependencies]
-serde = { version = "1", features = ["derive"], optional = true }
-specta = { optional = true, git = "https://github.com/specta-rs/specta", version = "=2.0.0-rc.20", features = [
+serde = { workspace = true, features = ["derive"], optional = true }
+specta = { optional = true, git = "https://github.com/specta-rs/specta", version = "2.0.0-rc.20", features = [
     "serde",
     "interop",
     "derive",
 ], tag = "v2.0.0-rc.20" }
 
 [target.'cfg(target_family = "windows")'.dependencies]
-windows = { version = "0.62", features = ["Win32", "Win32_Globalization", "Win32_Graphics", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_UI", "Win32_UI_WindowsAndMessaging", "Win32_System_ProcessStatus", "Win32_System_Threading", "Win32_System_Diagnostics", "Win32_Storage_FileSystem", "Wdk_System_Threading", "Win32_System_Kernel", "Win32_System_Diagnostics_Debug", "Win32_System_Console"] }
+windows = { workspace = true, features = ["Win32", "Win32_Globalization", "Win32_Graphics", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_UI", "Win32_UI_WindowsAndMessaging", "Win32_System_ProcessStatus", "Win32_System_Threading", "Win32_System_Diagnostics", "Win32_Storage_FileSystem", "Wdk_System_Threading", "Win32_System_Kernel", "Win32_System_Diagnostics_Debug", "Win32_System_Console"] }
 
 [features]
 serde = ["dep:serde"]
 specta = ["dep:specta"]
 
 [dev-dependencies]
-serde_json = "1"
+serde_json = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["x86_64-pc-windows-msvc"]

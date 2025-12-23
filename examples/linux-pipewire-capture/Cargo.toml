@@ -5,5 +5,5 @@ edition = "2021"
 publish = false
 
 [dependencies]
-libobs-simple = { path = "../../libobs-simple" }
-anyhow = "1.0.98"
+libobs-simple = { workspace = true }
+anyhow = { workspace = true }
