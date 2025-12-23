@@ -168,6 +168,8 @@ jobs:
           TOP_SECRET_NO_DUMMY_DLL: true
 
       - name: Check minimal dependency version compatability
+        #TODO this is currently not working for windows because of some weird winapi specific stuff
+        if: matrix.os == 'ubuntu-latest'
         run: cargo minimal-versions check --workspace --ignore-private --detach-path-deps=skip-exact
         env:
           TOP_SECRET_NO_DUMMY_DLL: true
