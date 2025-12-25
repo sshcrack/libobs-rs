@@ -43,6 +43,12 @@
             rust-bin.stable.latest.default
             obs-studio
             simde
+            glib
+            xorg.libX11
+            wayland
+            libxcb-util
+            cargo-hack
+            cargo-nextest
           ];
         };
       };
