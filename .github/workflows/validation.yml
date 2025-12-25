@@ -165,7 +165,6 @@ jobs:
         run: cargo nextest r --profile ci --all-features --target-dir target/nextest-all-features
         env:
           TOP_SECRET_NO_DUMMY_DLL: true
-
   build-test-nix:
     name: Build and Test (Nix)
     runs-on: ubuntu-latest
