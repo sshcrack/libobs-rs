@@ -87,7 +87,7 @@ fn main() -> anyhow::Result<()> {
         // Switching monitor
         monitor_capture
             .create_updater::<MonitorCaptureSourceUpdater>()?
-            .set_monitor(&monitors[1])
+            .set_monitor(&monitors[1 % monitors.len()])
             .update()?;
 
         println!("Recording for another 5 seconds...");
