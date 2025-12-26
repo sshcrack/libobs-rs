@@ -49,6 +49,7 @@
             libxcb-util
             cargo-hack
             cargo-nextest
+            ffmpeg
           ];
 
           shellHook = ''

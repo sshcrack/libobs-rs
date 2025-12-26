@@ -176,6 +176,23 @@ jobs:
         run: nix develop --command cargo fmt -- --check
       - name: Check Rust with Clippy (Nix)
         run: nix develop --command cargo clippy --features __ci -- -D warnings
+      - name: Set up virtual display for Linux
+        run: |
+          # Start virtual display
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+
+          # Wait for Xvfb to start
+          sleep 3
+
+          # Set display environment variable for subsequent steps
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          packages: xvfb
+          version: 1.0
       - name: Check code compilation (Nix)
         run: nix develop --command cargo hack check --feature-powerset --skip generate_bindings,include_win_bindings,__test_environment --at-least-one-of __ci,__ci
       - name: Run tests (no default features) (Nix)
