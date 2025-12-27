@@ -41,7 +41,6 @@ use libobs_wrapper::{
     encoders::{ObsAudioEncoderType, ObsContextEncoders, ObsVideoEncoderType},
     utils::{AudioEncoderInfo, ObsError, ObsPath, ObsString, OutputInfo, VideoEncoderInfo},
 };
-use std::io::Write;
 
 /// Preset for x264 software encoder
 #[derive(Debug, Clone, Copy)]
@@ -348,16 +347,12 @@ impl SimpleOutputBuilder {
             None,
         );
 
-        log::trace!("Creating output with settings: {:?}", self.settings);
-        std::io::stdout().flush().unwrap();
         let mut output = self.context.output(output_info)?;
 
         // Create and configure video encoder (with hardware fallback)
         let video_encoder_type = self.select_video_encoder_type(&self.settings.video_encoder)?;
         let mut video_settings = self.context.data()?;
 
-        log::trace!("Selected video encoder: {:?}", video_encoder_type);
-        std::io::stdout().flush().unwrap();
         self.configure_video_encoder(&mut video_settings)?;
 
         let video_encoder_info = VideoEncoderInfo::new(
@@ -367,8 +362,6 @@ impl SimpleOutputBuilder {
             None,
         );
 
-        log::trace!("Creating video encoder with info: {:?}", video_encoder_info);
-        std::io::stdout().flush().unwrap();
         output.create_and_set_video_encoder(video_encoder_info)?;
 
         // Create and configure audio encoder

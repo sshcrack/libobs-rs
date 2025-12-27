@@ -12,9 +12,8 @@ use libobs_simple::{
 use libobs_wrapper::{
     context::ObsContext,
     data::properties::{ObsProperty, ObsPropertyObject, types::ObsListItemValue},
-    encoders::{ObsAudioEncoderType, ObsVideoEncoderType},
     sources::ObsSourceRef,
-    utils::{AudioEncoderInfo, ObsPath, StartupInfo, VideoEncoderInfo},
+    utils::{ObsPath, StartupInfo},
 };
 
 pub fn main() -> anyhow::Result<()> {
@@ -41,28 +40,12 @@ pub fn main() -> anyhow::Result<()> {
     let properties = ObsSourceRef::get_properties_by_id("monitor_capture", context.runtime())?;
     println!("Properties: {:?}", properties);
 
-    // Property name as key and its value can be passed as settings to the encoder while creating or updating the encoder
-    output.create_and_set_video_encoder(VideoEncoderInfo::new(
-        ObsVideoEncoderType::OBS_X264,
-        "video_encoder",
-        None,
-        None,
-    ))?;
-    output.create_and_set_audio_encoder(
-        AudioEncoderInfo::new(ObsAudioEncoderType::FFMPEG_AAC, "audio_encoder", None, None),
-        0,
-    )?;
-
-    // In case we already have the encoder and we want to use the same encoder for multiple outputs, use:
-    // output.set_video_encoder(ObsVideoEncoder)?;
-    // output.set_audio_encoder(ObsAudioEncoder)?;
-
     // Can update the output path to record to a different location
     let mut settings = context.data()?;
     settings.set_string("path", ObsPath::from_relative("obs_output.mp4"))?;
 
     // Update path
-    context.update_output("MAIN", settings)?;
+    output.update_settings(settings)?;
     // To get the list of all monitors
     // It has a loop hole though, somehow the monitor_id returned in property is same if we have multiple monitor of exactly same model (exactly same monitor), use `libobs-window-helper` lib for fix
     let properties = source.get_properties()?;
@@ -83,6 +66,7 @@ pub fn main() -> anyhow::Result<()> {
         .set_capture_method(ObsDisplayCaptureMethod::MethodWgc)
         .add_to_scene(&mut scene)?;
 
+    println!("Source added to scene!");
     let position = scene.get_source_position(&source)?;
     println!("Position: {:?}", position);
 
@@ -109,5 +93,6 @@ pub fn main() -> anyhow::Result<()> {
     // Remove the source from the scene
     // scene.remove_source(&source)?;
 
+    println!("Done recording!");
     Ok(())
 }
