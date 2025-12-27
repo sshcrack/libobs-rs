@@ -46,7 +46,7 @@ pub fn test_recording() {
         .set_string("extension", "mp4")
         .set_int("max_time_sec", 15)
         .set_int("max_size_mb", 500)
-        .apply()
+        .update()
         .unwrap();
 
     let mut replay_buffer = context

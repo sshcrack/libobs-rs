@@ -62,12 +62,7 @@ impl ObsDataUpdater {
         self
     }
 
-    #[deprecated = "Use `apply` instead."]
     pub fn update(self) -> Result<(), ObsError> {
-        self.apply()
-    }
-
-    pub fn apply(self) -> Result<(), ObsError> {
         let ObsDataUpdater {
             changes,
             obs_data,
